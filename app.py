@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import streamlit as st
 from google import genai
 from google.genai import types
@@ -101,16 +102,46 @@ def ask_gemini(system, history):
         for m in history
     ]
 
-    resp = get_client().models.generate_content(
-        model=MODEL,
-        contents=contents,
-        config=types.GenerateContentConfig(
-            system_instruction=system
-        )
-    )
+    for attempt in range(3):
+        try:
+            resp = get_client().models.generate_content(
+                model=MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system,
+                    temperature=0.6
+                )
+            )
 
-    return resp.text or ""
+            return resp.text or ""
 
+        except Exception as e:
+            error_text = str(e)
+
+            # 429 — сұраныс лимиті
+            if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
+                wait_time = 20 * (attempt + 1)
+
+            # 503 — серверге сұраныс көп
+            elif "503" in error_text or "UNAVAILABLE" in error_text:
+                wait_time = 5 * (attempt + 1)
+
+            else:
+                raise
+
+            # Соңғы әрекеттен кейін тоқтау
+            if attempt == 2:
+                st.error(
+                    "Gemini уақытша қолжетімсіз. "
+                    "Біраз уақыттан кейін қайта көріңіз."
+                )
+                st.stop()
+
+            with st.spinner(
+                f"Gemini жауабын күтіп тұрмыз... "
+                f"{wait_time} секунд"
+            ):
+                time.sleep(wait_time)
 def init_state():
     defaults = dict(stage="form", user=None, profession=None, system=None,
                     history=[], report=None)
