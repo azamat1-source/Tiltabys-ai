@@ -130,12 +130,9 @@ def ask_gemini(system, history):
                 raise
 
             # Соңғы әрекеттен кейін тоқтау
-            if attempt == 2:
-                st.error(
-                    "Gemini уақытша қолжетімсіз. "
-                    "Біраз уақыттан кейін қайта көріңіз."
-                )
-                st.stop()
+           if attempt == 2:
+    st.error(f"Gemini қатесінің нақты себебі: {error_text}")
+    st.stop()
 
             with st.spinner(
                 f"Gemini жауабын күтіп тұрмыз... "
