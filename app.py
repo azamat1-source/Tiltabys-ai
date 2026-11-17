@@ -4,7 +4,7 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-3.8-flash"
 MAX_USER_TURNS = 12  # қауіпсіздік шегі: сұхбат шексіз созылмасын
 END_MARKER = "Сұхбат аяқталды"
 
