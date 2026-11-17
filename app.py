@@ -100,8 +100,24 @@ def ask_gemini(system, history):
     resp = get_client().models.generate_content(
         model=MODEL,
         contents=contents,
-        config=types.GenerateContentConfig(system_instruction=system, temperature=0.6),
+       def ask_gemini(system, history):
+    contents = [
+        types.Content(
+            role=m["role"],
+            parts=[types.Part(text=m["text"])]
+        )
+        for m in history
+    ]
+
+    resp = get_client().models.generate_content(
+        model=MODEL,
+        contents=contents,
+        config=types.GenerateContentConfig(
+            system_instruction=system
+        ),
     )
+
+    return resp.text or ""
     return resp.text or ""
 
 
