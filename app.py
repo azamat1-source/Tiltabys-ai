@@ -94,14 +94,6 @@ def fill(prompt, **kw):
 
 def ask_gemini(system, history):
     contents = [
-        types.Content(role=m["role"], parts=[types.Part(text=m["text"])])
-        for m in history
-    ]
-    resp = get_client().models.generate_content(
-        model=MODEL,
-        contents=contents,
-       def ask_gemini(system, history):
-    contents = [
         types.Content(
             role=m["role"],
             parts=[types.Part(text=m["text"])]
@@ -114,12 +106,10 @@ def ask_gemini(system, history):
         contents=contents,
         config=types.GenerateContentConfig(
             system_instruction=system
-        ),
+        )
     )
 
     return resp.text or ""
-    return resp.text or ""
-
 
 def init_state():
     defaults = dict(stage="form", user=None, profession=None, system=None,
