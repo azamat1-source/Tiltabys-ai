@@ -212,7 +212,6 @@ def step_interview():
         f"{st.session_state.user['name']}"
     )
 
-    # Бірінші Gemini сұранысы: 5 сұрақ дайындау
     if not st.session_state.questions_ready:
         st.info("Жасанды интеллект сұхбат сұрақтарын дайындап жатыр...")
 
@@ -226,7 +225,7 @@ def step_interview():
             )
         )
 
-    with st.spinner("HR-менеджер дайындалуда..."):
+        with st.spinner("HR-менеджер дайындалуда..."):
             result = ask_gemini(prompt)
 
         if not result:
@@ -245,9 +244,7 @@ def step_interview():
                     questions.append(q)
 
             if len(questions) < 5:
-                st.error(
-                    "Сұрақтар базасында 5 сұрақ жеткіліксіз."
-                )
+                st.error("Сұрақтар базасында 5 сұрақ жеткіліксіз.")
                 return
 
             st.session_state.questions = questions[:5]
@@ -287,7 +284,6 @@ def step_interview():
     st.progress(len(answers) / 5)
     st.caption(f"Сұрақ {index + 1} / 5")
 
-    # Бұрынғы жауаптарды көрсету
     for i, answer in enumerate(answers):
         with st.chat_message("assistant"):
             st.write(f"**{i + 1}-сұрақ:** {questions[i]}")
@@ -295,7 +291,6 @@ def step_interview():
         with st.chat_message("user"):
             st.write(answer)
 
-    # Бес сұраққа жауап берілді
     if index >= 5:
         st.success("Сұхбат аяқталды! Рақмет.")
         if st.button("📊 Нәтижені көру", type="primary"):
@@ -303,7 +298,6 @@ def step_interview():
             st.rerun()
         return
 
-    # Қазіргі сұрақ
     with st.chat_message("assistant"):
         st.write(questions[index])
 
@@ -313,7 +307,6 @@ def step_interview():
         st.session_state.answers.append(answer.strip())
         st.session_state.question_index += 1
         st.rerun()
-
 
 def fallback_report(questions, answers, db_questions):
     """Gemini қолжетімсіз болғанда қарапайым бағалау."""
