@@ -465,10 +465,12 @@ def step_report():
             report = ask_gemini(prompt)
 
             if report is None:
-                st.warning(
-                    "Gemini API қолжетімсіз. "
-                    "Резервтік бағалау жүйесі іске қосылды."
-                )
+    st.error("GEMINI БАҒАЛАУ ЖАСАЙ АЛМАДЫ!")
+    report = fallback_report(
+        questions,
+        answers,
+        st.session_state.profession["questions"]
+    )
 
                 report = fallback_report(
                     questions,
