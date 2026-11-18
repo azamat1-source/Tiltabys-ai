@@ -6,54 +6,57 @@ from google import genai
 from google.genai import types
 
 MODEL = "gemini-3.8-flash"
-MAX_USER_TURNS = 12  # қауіпсіздік шегі: сұхбат шексіз созылмасын
-END_MARKER = "Сұхбат аяқталды"
 
-INTERVIEW_PROMPT = """Сен тәжірибелі HR-менеджерсің және үміткермен жұмысқа орналасу сұхбатын жүргізіп жатырсың.
+QUESTION_PROMPT = """
+Сен тәжірибелі HR-менеджерсің.
 
-ДЕРЕКТЕР:
-- Таңдалған мамандық: {profession}
-- Сұрақтар базасы (questions_db.json): {questions}
+Мамандық: {profession}
+Деңгей: {level}
 
-ЕРЕЖЕЛЕР:
-1. Сұхбатты қазақ тілінде, сыпайы және кәсіби тонда жүргіз.
-2. Сұхбат басында қысқаша амандасып, мамандықты атап, сұхбат 5 сұрақтан тұратынын айт.
-3. Дәл 5 негізгі сұрақ қой. Сұрақтарды тек базадан таңда, базада жоқ сұрақ ойлап таппа.
-4. Бір уақытта тек бір сұрақ қой және үміткердің жауабын күт.
-5. Бейімделу ережесі:
-   - Жауап толық және мықты болса, келесі сұраққа өт.
-   - Жауап қысқа, анық емес немесе жартылай болса, 1 қысқа нақтылаушы сұрақ қой (мысалы: «Нақты мысал келтіре аласыз ба?»).
-   - Нақтылаушы сұрақ негізгі 5 сұрақтың санына кірмейді, бірақ бір сұраққа тек 1 рет қойылады.
-6. Үміткердің жауабын сол сәтте бағалама, дұрыс/бұрыс деп айтпа. Тек «Рақмет, түсінікті» сияқты бейтарап жауап бер.
-7. Үміткер сұрақтан тыс нәрсе сұраса, сыпайы түрде сұхбатқа қайтар.
-8. 5-сұрақтың жауабын алған соң: «Сұхбат аяқталды, рақмет! Қазір нәтижеңізді талдаймын» деп жаз және басқа сұрақ қойма."""
+Сұрақтар базасы:
+{questions}
 
-REPORT_PROMPT = """Сен тәжірибелі HR-эксперт және бағалаушысың. Төменде сұхбаттың толық мәтіні (сұрақтар мен үміткердің жауаптары) берілген. Оны талдап, 100 балдық шкала бойынша бағала.
+Осы мәліметтерге сүйеніп, үміткерге арналған дәл 5 сұхбат сұрағын дайында.
 
-ДЕРЕКТЕР:
-- Мамандық: {profession}
-- Сұрақтар және дұрыс жауап критерийлері (questions_db.json): {questions}
-- Сұхбат мәтіні: {dialog}
+Ережелер:
+- Сұрақтар қазақ тілінде болсын.
+- Сұрақтар мамандыққа сәйкес болсын.
+- Сұрақтарды тек берілген базадан ал.
+- Сұрақтарды қайталама.
+- Біртіндеп жеңілден күрделіге қарай орналастыр.
+- Тек JSON массивін қайтар.
+- Markdown немесе қосымша түсініктеме жазба.
 
-100 БАЛДЫҚ ШКАЛА:
+Формат:
+["1-сұрақ", "2-сұрақ", "3-сұрақ", "4-сұрақ", "5-сұрақ"]
+"""
+
+REPORT_PROMPT = """
+Сен тәжірибелі HR-экспертсің.
+Үміткердің сұхбат жауаптарын 100 балдық шкала бойынша бағала.
+
+Мамандық: {profession}
+Сұрақтар базасы мен бағалау критерийлері:
+{questions}
+
+Сұхбат:
+{dialog}
+
+БАҒАЛАУ ШКАЛАСЫ:
 1. Мазмұн мен дұрыстығы: 40 балл
-   (жауап сұраққа сәйкес пе, фактілер дұрыс па, базадағы критерийлерді қамтыды ма)
 2. Құрылым мен логика: 20 балл
-   (жауап ретті ме, ой басынан соңына дейін түсінікті ме)
 3. Нақтылық пен мысалдар: 20 балл
-   (нақты мысал, тәжірибе, сандар бар ма)
 4. Коммуникация: 10 балл
-   (сөйлеу мәдениеті, сенімділік, сыпайылық, грамматика)
 5. Бейімделу: 10 балл
-   (нақтылаушы сұрақтарға дұрыс жауап бере алды ма)
 
-БАҒАЛАУ ЕРЕЖЕЛЕРІ:
+Ережелер:
 - Әр жауапты базадағы criteria және good_answer-мен салыстыр.
-- Тек сұхбатта шынымен айтылғанға сүйен, үміткер айтпаған нәрсені өзің қоспа.
-- Ұпайды әділ қой: бос немесе қате жауапқа төмен балл бер.
-- Барлық критерийдің қосындысы дәл 100-ден аспауы керек.
+- Тек үміткердің нақты жауаптарына сүйен.
+- Бос немесе қате жауапқа төмен балл бер.
+- Жалпы ұпай 100-ден аспасын.
+- Қазақ тілінде жауап бер.
 
-ШЫҒЫС ФОРМАТЫ (қазақ тілінде):
+НӘТИЖЕ ФОРМАТЫ:
 1. ЖАЛПЫ ҰПАЙ: X / 100
 2. ДЕҢГЕЙ:
    - 90–100: өте жақсы, жұмысқа дайын
@@ -61,15 +64,20 @@ REPORT_PROMPT = """Сен тәжірибелі HR-эксперт және бағ
    - 60–74: орташа, негізгі олқылықтар бар
    - 60-тан төмен: әлсіз, қайта дайындалу керек
 3. КРИТЕРИЙЛЕР БОЙЫНША:
-   - Мазмұн: X / 40, қысқа түсіндірме
-   - Құрылым: X / 20, қысқа түсіндірме
-   - Нақтылық: X / 20, қысқа түсіндірме
-   - Коммуникация: X / 10, қысқа түсіндірме
-   - Бейімделу: X / 10, қысқа түсіндірме
-4. ЖІБЕРІЛГЕН ҚАТЕЛЕР: нақты жауаптарға сілтеме жасап тізімде.
-5. ЖАҚСАРТУ КЕҢЕСТЕРІ: 3 нақты, орындалатын кеңес."""
+   - Мазмұн: X / 40
+   - Құрылым: X / 20
+   - Нақтылық: X / 20
+   - Коммуникация: X / 10
+   - Бейімделу: X / 10
+4. ЖІБЕРІЛГЕН ҚАТЕЛЕР
+5. ЖАҚСАРТУҒА АРНАЛҒАН 3 КЕҢЕС
+"""
 
-st.set_page_config(page_title="Тілтабыс AI", page_icon="🎯", layout="centered")
+st.set_page_config(
+    page_title="Тілтабыс AI",
+    page_icon="🎯",
+    layout="centered"
+)
 
 
 @st.cache_data
@@ -82,179 +90,254 @@ def load_db():
 def get_client():
     key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
     if not key:
-        st.error("GEMINI_API_KEY табылмады. Streamlit Secrets ішіне қосыңыз.")
+        st.error("GEMINI_API_KEY табылмады.")
         st.stop()
     return genai.Client(api_key=key)
 
 
-def fill(prompt, **kw):
-    for k, v in kw.items():
-        prompt = prompt.replace("{" + k + "}", v)
-    return prompt
-
-
-def ask_gemini(system, history):
-    contents = [
-        types.Content(
-            role=m["role"],
-            parts=[types.Part(text=m["text"])]
-        )
-        for m in history
-    ]
-
+def ask_gemini(prompt):
     for attempt in range(3):
         try:
-            resp = get_client().models.generate_content(
+            response = get_client().models.generate_content(
                 model=MODEL,
-                contents=contents,
+                contents=prompt,
                 config=types.GenerateContentConfig(
-                    system_instruction=system,
                     temperature=0.6
                 )
             )
-
-            return resp.text or ""
+            return response.text or ""
 
         except Exception as e:
             error_text = str(e)
 
+            # Тәуліктік лимит біткенде күтудің қажеті жоқ
             if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
-                wait_time = 20 * (attempt + 1)
+                st.error(
+                    "Gemini API лимиті таусылды. "
+                    "Қате хабарламасындағы retry уақытын күтіңіз."
+                )
+                st.stop()
 
+            # 503 — уақытша сервер қатесі
             elif "503" in error_text or "UNAVAILABLE" in error_text:
+                if attempt == 2:
+                    st.error(f"Gemini қатесі: {error_text}")
+                    st.stop()
+
                 wait_time = 5 * (attempt + 1)
+                with st.spinner(
+                    f"Gemini уақытша бос емес. {wait_time} секунд күтіңіз..."
+                ):
+                    time.sleep(wait_time)
 
             else:
                 st.error(f"Gemini қатесі: {error_text}")
                 st.stop()
 
-            if attempt == 2:
-                st.error(f"Gemini қатесінің нақты себебі: {error_text}")
-                st.stop()
 
-            with st.spinner(
-                f"Gemini жауабын күтіп тұрмыз... {wait_time} секунд"
-            ):
-                time.sleep(wait_time)
+def fill(prompt, **kw):
+    for key, value in kw.items():
+        prompt = prompt.replace("{" + key + "}", str(value))
+    return prompt
+
+
 def init_state():
-    defaults = dict(stage="form", user=None, profession=None, system=None,
-                    history=[], report=None)
-    for k, v in defaults.items():
-        st.session_state.setdefault(k, v)
+    defaults = {
+        "stage": "form",
+        "user": None,
+        "profession": None,
+        "questions": [],
+        "answers": [],
+        "question_index": 0,
+        "questions_ready": False,
+        "report": None
+    }
+
+    for key, value in defaults.items():
+        st.session_state.setdefault(key, value)
 
 
 def reset():
-    for k in ["stage", "user", "profession", "system", "history", "report"]:
-        st.session_state.pop(k, None)
+    for key in [
+        "stage", "user", "profession",
+        "questions", "answers", "question_index",
+        "questions_ready", "report"
+    ]:
+        st.session_state.pop(key, None)
 
 
-def dialog_text():
-    lines = []
-    for m in st.session_state.history[1:]:  # 1-хабарлама - жүйелік бастау
-        who = "HR" if m["role"] == "model" else "Үміткер"
-        lines.append(f"{who}: {m['text']}")
-    return "\n".join(lines)
-
-
-def user_turns():
-    return sum(1 for m in st.session_state.history[1:] if m["role"] == "user")
-
-
-# ---------- 1-қадам: деректер ----------
 def step_form():
     st.title("🎯 Тілтабыс AI")
-    st.caption("ЖИ-HR сұхбат симуляторы: 5 сұрақ, 100 балдық баға, жақсарту кеңестері")
+    st.caption(
+        "ЖИ-HR сұхбат симуляторы: 5 сұрақ, "
+        "100 балдық баға және жақсарту кеңестері"
+    )
+
     db = load_db()
+
     with st.form("start"):
         name = st.text_input("Атыңыз")
-        prof = st.selectbox("Мамандық / бағыт", [p["profession"] for p in db])
-        level = st.selectbox("Деңгейіңіз", ["Бастаушы", "Орта", "Тәжірибелі"])
+
+        prof = st.selectbox(
+            "Мамандық / бағыт",
+            [p["profession"] for p in db]
+        )
+
+        level = st.selectbox(
+            "Деңгейіңіз",
+            ["Бастаушы", "Орта", "Тәжірибелі"]
+        )
+
         ok = st.form_submit_button("Сұхбатты бастау")
+
     if ok:
         if not name.strip():
             st.warning("Атыңызды енгізіңіз.")
             return
-        prof_data = next(p for p in db if p["profession"] == prof)
-        st.session_state.user = {"name": name.strip(), "level": level}
-        st.session_state.profession = prof_data
-        st.session_state.system = fill(
-            INTERVIEW_PROMPT,
-            profession=f"{prof} ({level} деңгей, үміткер аты: {name.strip()})",
-            questions=json.dumps(prof_data["questions"], ensure_ascii=False),
+
+        prof_data = next(
+            p for p in db if p["profession"] == prof
         )
-        st.session_state.history = [
-            {"role": "user", "text": "Сұхбатты бастаңыз."}
-        ]
+
+        st.session_state.user = {
+            "name": name.strip(),
+            "level": level
+        }
+
+        st.session_state.profession = prof_data
         st.session_state.stage = "interview"
+        st.session_state.questions = []
+        st.session_state.answers = []
+        st.session_state.question_index = 0
+        st.session_state.questions_ready = False
+        st.session_state.report = None
+
         st.rerun()
 
 
-# ---------- 2-қадам: сұхбат ----------
 def step_interview():
-    st.subheader(f"💬 {st.session_state.profession['profession']} · {st.session_state.user['name']}")
-    h = st.session_state.history
+    st.subheader(
+        f"💬 {st.session_state.profession['profession']} · "
+        f"{st.session_state.user['name']}"
+    )
 
-    if len(h) == 1:  # бірінші сәлемдесу
+    # Бірінші Gemini сұранысы: 5 сұрақ дайындау
+    if not st.session_state.questions_ready:
+        st.info("Жасанды интеллект сұхбат сұрақтарын дайындап жатыр...")
+
+        prompt = fill(
+            QUESTION_PROMPT,
+            profession=st.session_state.profession["profession"],
+            level=st.session_state.user["level"],
+            questions=json.dumps(
+                st.session_state.profession["questions"],
+                ensure_ascii=False
+            )
+        )
+
         with st.spinner("HR-менеджер дайындалуда..."):
-            try:
-                h.append({"role": "model", "text": ask_gemini(st.session_state.system, h)})
-            except Exception as e:
-                st.error(f"Gemini қатесі: {e}")
-                st.button("Қайта көру")
+            result = ask_gemini(prompt)
+
+        try:
+            start = result.find("[")
+            end = result.rfind("]") + 1
+
+            questions = json.loads(result[start:end])
+
+            if len(questions) != 5:
+                st.error("AI 5 сұрақ дайындамады. Қайта бастаңыз.")
                 return
 
-    for m in h[1:]:
-        with st.chat_message("assistant" if m["role"] == "model" else "user"):
-            st.write(m["text"])
+            st.session_state.questions = questions
+            st.session_state.questions_ready = True
+            st.rerun()
 
-    finished = END_MARKER in h[-1]["text"] or user_turns() >= MAX_USER_TURNS
-    if finished:
+        except Exception:
+            st.error("Сұрақтарды оқу мүмкін болмады. Қайта бастаңыз.")
+            st.code(result)
+            return
+
+    questions = st.session_state.questions
+    answers = st.session_state.answers
+    index = st.session_state.question_index
+
+    st.progress(len(answers) / 5)
+    st.caption(f"Сұрақ {index + 1} / 5")
+
+    # Бұрынғы жауаптарды көрсету
+    for i, answer in enumerate(answers):
+        with st.chat_message("assistant"):
+            st.write(f"**{i + 1}-сұрақ:** {questions[i]}")
+
+        with st.chat_message("user"):
+            st.write(answer)
+
+    # Бес сұраққа жауап берілді
+    if index >= 5:
+        st.success("Сұхбат аяқталды! Рақмет.")
         if st.button("📊 Нәтижені көру", type="primary"):
             st.session_state.stage = "report"
             st.rerun()
         return
 
+    # Қазіргі сұрақ
+    with st.chat_message("assistant"):
+        st.write(questions[index])
+
     answer = st.chat_input("Жауабыңызды жазыңыз...")
+
     if answer:
-        h.append({"role": "user", "text": answer})
-        with st.spinner("..."):
-            try:
-                h.append({"role": "model", "text": ask_gemini(st.session_state.system, h)})
-            except Exception as e:
-                h.pop()
-                st.error(f"Gemini қатесі: {e}. Жауабыңызды қайта жіберіңіз.")
-                return
+        st.session_state.answers.append(answer.strip())
+        st.session_state.question_index += 1
         st.rerun()
 
 
-# ---------- 3-қадам: есеп ----------
 def step_report():
     st.title("📊 Сұхбат нәтижесі")
+
     if st.session_state.report is None:
-        with st.spinner("Жауаптарыңыз талдануда..."):
-            prompt = fill(
-                REPORT_PROMPT,
-                profession=st.session_state.profession["profession"],
-                questions=json.dumps(st.session_state.profession["questions"], ensure_ascii=False),
-                dialog=dialog_text(),
+        questions = st.session_state.questions
+        answers = st.session_state.answers
+
+        dialog = ""
+
+        for i in range(len(answers)):
+            dialog += (
+                f"\nСұрақ {i + 1}: {questions[i]}"
+                f"\nҮміткердің жауабы: {answers[i]}\n"
             )
-            try:
-                st.session_state.report = ask_gemini(
-                    "Сен HR-эксперт және бағалаушысың. Қазақ тілінде жауап бер.",
-                    [{"role": "user", "text": prompt}],
-                )
-            except Exception as e:
-                st.error(f"Есеп жасау қатесі: {e}")
-                if st.button("Қайталау"):
-                    st.rerun()
-                return
+
+        prompt = fill(
+            REPORT_PROMPT,
+            profession=st.session_state.profession["profession"],
+            questions=json.dumps(
+                st.session_state.profession["questions"],
+                ensure_ascii=False
+            ),
+            dialog=dialog
+        )
+
+        with st.spinner("AI жауаптарыңызды бағалап жатыр..."):
+            st.session_state.report = ask_gemini(prompt)
+
     st.markdown(st.session_state.report)
-    st.download_button("⬇️ Есепті жүктеу (.txt)", st.session_state.report,
-                       file_name="interview_report.txt")
+
+    st.download_button(
+        "⬇️ Есепті жүктеу (.txt)",
+        st.session_state.report,
+        file_name="interview_report.txt"
+    )
+
     if st.button("🔄 Жаңадан бастау"):
         reset()
         st.rerun()
 
 
 init_state()
-{"form": step_form, "interview": step_interview, "report": step_report}[st.session_state.stage]()
+
+if st.session_state.stage == "form":
+    step_form()
+elif st.session_state.stage == "interview":
+    step_interview()
+elif st.session_state.stage == "report":
+    step_report()
