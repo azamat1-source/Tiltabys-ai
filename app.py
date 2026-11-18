@@ -444,7 +444,6 @@ def step_report():
         answers = st.session_state.answers
 
         dialog = ""
-
         for i in range(len(answers)):
             dialog += (
                 f"\nСұрақ {i + 1}: {questions[i]}"
@@ -461,20 +460,16 @@ def step_report():
             dialog=dialog
         )
 
-        with st.spinner("Жауаптарыңыз бағалануда..."):
+        with st.spinner("Gemini жауаптарыңызды бағалап жатыр..."):
             report = ask_gemini(prompt)
 
-            if report is None:
-                st.error("GEMINI БАҒАЛАУ ЖАСАЙ АЛМАДЫ!")
+        if report is None:
+            st.error("Gemini бағалау жасай алмады. API қатесін тексеріңіз.")
+            st.stop()
 
-                report = fallback_report(
-                    questions,
-                    answers,
-                    st.session_state.profession["questions"]
-                )
+        st.session_state.report = report
 
-            st.session_state.report = report
-
+    st.success("AI бағалауы сәтті орындалды!")
     st.markdown(st.session_state.report)
 
     st.download_button(
