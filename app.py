@@ -226,10 +226,10 @@ def step_interview():
             )
         )
 
-        with st.spinner("HR-менеджер дайындалуда..."):
+    with st.spinner("HR-менеджер дайындалуда..."):
             result = ask_gemini(prompt)
-       
-      if not result:
+
+        if not result:
             fallback_questions = (
                 st.session_state.profession["questions"]
             )
@@ -314,7 +314,6 @@ def step_interview():
         st.session_state.question_index += 1
         st.rerun()
 
-import re
 
 def fallback_report(questions, answers, db_questions):
     """Gemini қолжетімсіз болғанда қарапайым бағалау."""
