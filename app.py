@@ -122,7 +122,7 @@ def ask_gemini(prompt):
 
            else:
               st.error(f"Gemini қатесі: {error_text}")
-              return None
+                    return None
     
 
 
