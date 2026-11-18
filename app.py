@@ -120,8 +120,9 @@ def ask_gemini(prompt):
 
                 time.sleep(5 * (attempt + 1))
 
-            else:
-                return None
+           else:
+    st.error(f"Gemini қатесі: {error_text}")
+    return None
 
     return None
 
