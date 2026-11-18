@@ -228,25 +228,56 @@ def step_interview():
 
         with st.spinner("HR-менеджер дайындалуда..."):
             result = ask_gemini(prompt)
-         c
        
+      if not result:
+            fallback_questions = (
+                st.session_state.profession["questions"]
+            )
+
+            questions = []
+
+            for q in fallback_questions:
+                if isinstance(q, dict):
+                    question = q.get("question")
+                    if question:
+                        questions.append(question)
+                elif isinstance(q, str):
+                    questions.append(q)
+
+            if len(questions) < 5:
+                st.error(
+                    "Сұрақтар базасында 5 сұрақ жеткіліксіз."
+                )
+                return
+
+            st.session_state.questions = questions[:5]
+            st.session_state.questions_ready = True
+
+            st.warning(
+                "Gemini лимиті таусылды. "
+                "Дайын сұрақтар базасы қолданылды."
+            )
+            st.rerun()
+
         try:
             start = result.find("[")
             end = result.rfind("]") + 1
 
+            if start == -1 or end == 0:
+                raise ValueError("JSON массиві табылмады")
+
             questions = json.loads(result[start:end])
 
-            if len(questions) != 5:
-                st.error("AI 5 сұрақ дайындамады. Қайта бастаңыз.")
-                return
+            if not isinstance(questions, list) or len(questions) != 5:
+                raise ValueError("5 сұрақ алынбады")
 
             st.session_state.questions = questions
             st.session_state.questions_ready = True
             st.rerun()
 
-        except Exception:
-            st.error("Сұрақтарды оқу мүмкін болмады. Қайта бастаңыз.")
-            st.code(result)
+        except Exception as e:
+            st.error(f"Сұрақтарды оқу мүмкін болмады: {e}")
+            st.code(str(result))
             return
 
     questions = st.session_state.questions
