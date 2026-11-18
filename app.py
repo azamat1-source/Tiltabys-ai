@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import re
 import streamlit as st
 from google import genai
 from google.genai import types
@@ -105,34 +106,24 @@ def ask_gemini(prompt):
                     temperature=0.6
                 )
             )
-            return response.text or ""
+            return response.text or None
 
         except Exception as e:
             error_text = str(e)
 
-            # Тәуліктік лимит біткенде күтудің қажеті жоқ
             if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
-                st.error(
-                    "Gemini API лимиті таусылды. "
-                    "Қате хабарламасындағы retry уақытын күтіңіз."
-                )
-                st.stop()
+                return None
 
-            # 503 — уақытша сервер қатесі
             elif "503" in error_text or "UNAVAILABLE" in error_text:
                 if attempt == 2:
-                    st.error(f"Gemini қатесі: {error_text}")
-                    st.stop()
+                    return None
 
-                wait_time = 5 * (attempt + 1)
-                with st.spinner(
-                    f"Gemini уақытша бос емес. {wait_time} секунд күтіңіз..."
-                ):
-                    time.sleep(wait_time)
+                time.sleep(5 * (attempt + 1))
 
             else:
-                st.error(f"Gemini қатесі: {error_text}")
-                st.stop()
+                return None
+
+    return None
 
 
 def fill(prompt, **kw):
@@ -291,6 +282,145 @@ def step_interview():
         st.session_state.question_index += 1
         st.rerun()
 
+import re
+
+def fallback_report(questions, answers, db_questions):
+    """Gemini қолжетімсіз болғанда қарапайым бағалау."""
+
+    def words(text):
+        return set(re.findall(
+            r"[а-яәіңғүұқөһёa-z0-9]+",
+            text.lower()
+        ))
+
+    stopwords = {
+        "және", "мен", "бұл", "үшін", "туралы",
+        "маған", "менің", "болады", "керек", "деп",
+        "the", "and", "for", "with", "that"
+    }
+
+    reference_text = json.dumps(
+        db_questions, ensure_ascii=False
+    )
+    reference_words = words(reference_text) - stopwords
+
+    scores = {
+        "Мазмұн": [],
+        "Құрылым": [],
+        "Нақтылық": [],
+        "Коммуникация": [],
+        "Бейімделу": []
+    }
+
+    errors = []
+
+    for i, answer in enumerate(answers):
+        text = answer.strip()
+        tokens = words(text) - stopwords
+        word_count = len(text.split())
+
+        if not text or word_count < 3:
+            errors.append(
+                f"{i + 1}-жауап: жауап тым қысқа немесе толық емес."
+            )
+
+        # 1. Мазмұн: 40 балл
+        overlap = len(tokens & reference_words)
+        content = min(40, word_count * 0.35 +
+                      min(overlap, 10) * 1.2)
+
+        # 2. Құрылым: 20 балл
+        sentences = len(re.findall(r"[.!?]+", text))
+        structure = min(20, 5 + sentences * 3 +
+                        (5 if word_count >= 25 else 0))
+
+        # 3. Нақтылық: 20 балл
+        example_words = [
+            "мысалы", "тәжірибе", "жоба", "нәтиже",
+            "себебі", "өйткені", "өлшем", "есеп"
+        ]
+        examples = sum(1 for w in example_words if w in text.lower())
+        specificity = min(20, 5 + examples * 3 +
+                          (5 if re.search(r"\d+", text) else 0))
+
+        # 4. Коммуникация: 10 балл
+        communication = min(10, 3 + min(word_count / 5, 7))
+
+        # 5. Бейімделу: 10 балл
+        adaptive_words = [
+            "үйрен", "бейім", "шешім", "қиындық",
+            "дамыту", "тәжірибе", "жауапкершілік"
+        ]
+        adaptation = min(
+            10, 4 + sum(
+                2 for w in adaptive_words if w in text.lower()
+            )
+        )
+
+        if not text:
+            content = structure = specificity = 0
+            communication = adaptation = 0
+
+        scores["Мазмұн"].append(content)
+        scores["Құрылым"].append(structure)
+        scores["Нақтылық"].append(specificity)
+        scores["Коммуникация"].append(communication)
+        scores["Бейімделу"].append(adaptation)
+
+    final_scores = {
+        key: round(sum(value) / len(value))
+        if value else 0
+        for key, value in scores.items()
+    }
+
+    total = sum(final_scores.values())
+
+    if total >= 90:
+        level = "Өте жақсы, жұмысқа дайын"
+    elif total >= 75:
+        level = "Жақсы, кішкене жетілдіру керек"
+    elif total >= 60:
+        level = "Орташа, негізгі олқылықтар бар"
+    else:
+        level = "Әлсіз, қайта дайындалу керек"
+
+    if not errors:
+        errors.append(
+            "Қысқа жауаптар анықталған жоқ. "
+            "Дегенмен, нақты кәсіби терминдер мен мысалдарды көбейтуге болады."
+        )
+
+    return f"""
+# 📊 СҰХБАТ НӘТИЖЕСІ
+
+**ЖАЛПЫ ҰПАЙ: {total} / 100**
+
+**ДЕҢГЕЙ:** {level}
+
+## Критерийлер бойынша
+
+- Мазмұн: {final_scores['Мазмұн']} / 40
+- Құрылым: {final_scores['Құрылым']} / 20
+- Нақтылық: {final_scores['Нақтылық']} / 20
+- Коммуникация: {final_scores['Коммуникация']} / 10
+- Бейімделу: {final_scores['Бейімделу']} / 10
+
+## Жіберілген қателер
+
+{chr(10).join('- ' + e for e in errors)}
+
+## Жақсартуға арналған 3 кеңес
+
+1. Жауаптарыңызды нақты мысалдармен толықтырыңыз.
+2. Кәсіби терминдерді дұрыс қолданып үйреніңіз.
+3. Жауаптарыңызды жүйелі, логикалық ретпен жеткізіңіз.
+
+---
+*Ескерту: Бұл резервтік автоматты бағалау.
+AI сараптамасы емес. Баға жауаптың ұзындығы мен
+қарапайым мәтіндік белгілеріне негізделген.*
+"""
+
 
 def step_report():
     st.title("📊 Сұхбат нәтижесі")
@@ -317,8 +447,22 @@ def step_report():
             dialog=dialog
         )
 
-        with st.spinner("AI жауаптарыңызды бағалап жатыр..."):
-            st.session_state.report = ask_gemini(prompt)
+        with st.spinner("Жауаптарыңыз бағалануда..."):
+            report = ask_gemini(prompt)
+
+            if report is None:
+                st.warning(
+                    "Gemini API қолжетімсіз. "
+                    "Резервтік бағалау жүйесі іске қосылды."
+                )
+
+                report = fallback_report(
+                    questions,
+                    answers,
+                    st.session_state.profession["questions"]
+                )
+
+            st.session_state.report = report
 
     st.markdown(st.session_state.report)
 
@@ -331,7 +475,6 @@ def step_report():
     if st.button("🔄 Жаңадан бастау"):
         reset()
         st.rerun()
-
 
 init_state()
 
