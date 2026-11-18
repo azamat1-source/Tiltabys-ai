@@ -229,6 +229,34 @@ def step_interview():
         with st.spinner("HR-менеджер дайындалуда..."):
             result = ask_gemini(prompt)
 
+if not result:
+            fallback_questions = (
+                st.session_state.profession["questions"]
+            )
+
+            questions = [
+                q["question"]
+                if isinstance(q, dict)
+                else q
+                for q in fallback_questions[:5]
+            ]
+
+            if len(questions) < 5:
+                st.error(
+                    "Дайын сұрақтар саны 5-тен аз. "
+                    "questions_db.json файлын тексеріңіз."
+                )
+                return
+
+            st.session_state.questions = questions
+            st.session_state.questions_ready = True
+
+            st.warning(
+                "Gemini қолжетімсіз. "
+                "Дайын сұрақтар базасы қолданылды."
+            )
+            st.rerun()
+       
         try:
             start = result.find("[")
             end = result.rfind("]") + 1
