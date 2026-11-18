@@ -97,38 +97,23 @@ def get_client():
 
 
 def ask_gemini(prompt):
-    for attempt in range(3):
-        try:
-            response = get_client().models.generate_content(
-                model=MODEL,
-                contents=prompt
-            )
+    try:
+        response = get_client().models.generate_content(
+            model=MODEL,
+            contents=prompt
+        )
 
-            if response.text:
-                return response.text
+        if response.text:
+            return response.text
 
-            st.error("Gemini бос жауап қайтарды.")
-            return None
+        st.error("Gemini бос жауап қайтарды.")
+        return None
 
-        except Exception as e:
-            error_text = str(e)
-
-            if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
-                st.error(f"Gemini API лимиті: {error_text}")
-                return None
-
-            elif "503" in error_text or "UNAVAILABLE" in error_text:
-                if attempt == 2:
-                    st.error(f"Gemini сервер қатесі: {error_text}")
-                    return None
-
-                time.sleep(5 * (attempt + 1))
-
-            else:
-                st.error(f"Gemini қатесі: {error_text}")
-                return None
-
-    return None
+    except Exception as e:
+        st.error(
+            f"Gemini API қатесі: {type(e).__name__}: {e}"
+        )
+        return None
 
 
 def fill(prompt, **kw):
