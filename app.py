@@ -461,16 +461,11 @@ def step_report():
             dialog=dialog
         )
 
-        with st.spinner("Жауаптарыңыз бағалануда..."):
+with st.spinner("Жауаптарыңыз бағалануда..."):
             report = ask_gemini(prompt)
 
             if report is None:
-    st.error("GEMINI БАҒАЛАУ ЖАСАЙ АЛМАДЫ!")
-    report = fallback_report(
-        questions,
-        answers,
-        st.session_state.profession["questions"]
-    )
+                st.error("GEMINI БАҒАЛАУ ЖАСАЙ АЛМАДЫ!")
 
                 report = fallback_report(
                     questions,
