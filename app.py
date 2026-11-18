@@ -461,7 +461,7 @@ def step_report():
             dialog=dialog
         )
 
-with st.spinner("Жауаптарыңыз бағалануда..."):
+        with st.spinner("Жауаптарыңыз бағалануда..."):
             report = ask_gemini(prompt)
 
             if report is None:
@@ -486,7 +486,6 @@ with st.spinner("Жауаптарыңыз бағалануда..."):
     if st.button("🔄 Жаңадан бастау"):
         reset()
         st.rerun()
-
 init_state()
 
 if st.session_state.stage == "form":
