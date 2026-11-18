@@ -112,19 +112,21 @@ def ask_gemini(prompt):
             error_text = str(e)
 
             if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
+                st.error("Gemini API лимиті таусылған (429).")
                 return None
 
             elif "503" in error_text or "UNAVAILABLE" in error_text:
                 if attempt == 2:
+                    st.error(f"Gemini сервері қолжетімсіз: {error_text}")
                     return None
 
                 time.sleep(5 * (attempt + 1))
 
-           else:
-              st.error(f"Gemini қатесі: {error_text}")
-                    return None
+            else:
+                st.error(f"Gemini қатесі: {error_text}")
+                return None
 
-return None
+    return None
     
 
 
