@@ -6,546 +6,130 @@ from google import genai
 from openai import OpenAI
 
 
-# ==================================================
-# 1. БАПТАУЛАР
-# ==================================================
+# =====================================================
+# 1. БЕТ БАПТАУЛАРЫ
+# =====================================================
+
+st.set_page_config(
+    page_title="Тілтабыс AI",
+    page_icon="🏗️",
+    layout="wide"
+)
 
 MODEL = "gemini-3.8-flash"
 QWEN_MODEL = "qwen3.7-plus"
 
-st.set_page_config(
-    page_title="Тілтабыс AI",
-    page_icon="🎯",
-    layout="centered"
-)
+QWEN_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 
 
-# ==================================================
-# 2. ДИЗАЙН
-# ==================================================
-
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
-
-:root {
-    --green: #174c3c;
-    --green-light: #e7f0e9;
-    --cream: #f7f6ef;
-    --text: #20352d;
-    --muted: #718078;
-}
-
-.stApp {
-    background: var(--cream);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-}
-
-header[data-testid="stHeader"] {
-    background: transparent;
-}
-
-.block-container {
-    max-width: 920px;
-    padding-top: 2rem;
-    padding-bottom: 4rem;
-}
-
-h1, h2, h3 {
-    font-family: 'Manrope', sans-serif !important;
-    color: var(--green) !important;
-    font-weight: 800 !important;
-}
-
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 35px;
-}
-
-.brand-icon {
-    background: var(--green);
-    color: white;
-    width: 42px;
-    height: 42px;
-    border-radius: 13px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-}
-
-.brand-name {
-    color: var(--green);
-    font-weight: 800;
-    font-size: 21px;
-}
-
-.hero {
-    background: var(--green);
-    color: white;
-    border-radius: 24px;
-    padding: 38px 34px;
-    margin-bottom: 28px;
-}
-
-.hero-tag {
-    display: inline-block;
-    background: rgba(255,255,255,0.14);
-    color: #d9eadf;
-    border-radius: 30px;
-    padding: 7px 13px;
-    font-size: 12px;
-    font-weight: 700;
-    margin-bottom: 18px;
-}
-
-.hero h1 {
-    color: white !important;
-    font-size: 36px !important;
-    line-height: 1.2;
-    margin: 0 0 14px 0;
-}
-
-.hero p {
-    color: #dce9e1;
-    font-size: 15px;
-    line-height: 1.7;
-    margin-bottom: 0;
-}
-
-.info-card {
-    background: white;
-    border: 1px solid #e7e9e1;
-    border-radius: 18px;
-    padding: 20px;
-    margin-bottom: 15px;
-    min-height: 112px;
-}
-
-.info-title {
-    color: var(--green);
-    font-size: 16px;
-    font-weight: 800;
-    margin-bottom: 8px;
-}
-
-.info-text {
-    color: var(--muted);
-    font-size: 13px;
-    line-height: 1.6;
-}
-
-div[data-testid="stForm"] {
-    background: white;
-    border: 1px solid #e7e9e1;
-    border-radius: 20px;
-    padding: 26px;
-}
-
-div[data-testid="stTextInput"] input,
-div[data-testid="stSelectbox"] div[data-baseweb="select"] {
-    border-radius: 11px;
-}
-
-.stButton > button,
-.stFormSubmitButton > button,
-.stDownloadButton > button {
-    background: var(--green);
-    color: white;
-    border: 1px solid var(--green);
-    border-radius: 12px;
-    padding: 12px 22px;
-    font-weight: 700;
-    min-height: 46px;
-}
-
-.stButton > button:hover,
-.stFormSubmitButton > button:hover,
-.stDownloadButton > button:hover {
-    background: #23664f;
-    color: white;
-    border-color: #23664f;
-}
-
-div[data-testid="stChatMessage"] {
-    background: white;
-    border: 1px solid #e7e9e1;
-    border-radius: 16px;
-    padding: 14px;
-}
-
-div[data-testid="stProgressBar"] > div > div {
-    background: var(--green);
-}
-
-.stAlert {
-    border-radius: 13px;
-}
-
-.result-card {
-    background: white;
-    border: 1px solid #e7e9e1;
-    border-radius: 18px;
-    padding: 24px;
-    margin: 15px 0;
-}
-
-.footer {
-    text-align: center;
-    color: #89958d;
-    font-size: 12px;
-    padding-top: 35px;
-}
-
-@media (max-width: 600px) {
-    .hero {
-        padding: 27px 22px;
-    }
-
-    .hero h1 {
-        font-size: 28px !important;
-    }
-
-    div[data-testid="stForm"] {
-        padding: 18px;
-    }
-}
-</style>
-""", unsafe_allow_html=True)
-
-
-# ==================================================
-# 3. ТІЛДЕР
-# ==================================================
-
-TEXT = {
-    "Қазақша": {
-        "name": "Атыңыз",
-        "profession": "Мамандық / бағыт",
-        "language": "Сұхбат тілі",
-        "level": "Сұхбат деңгейі",
-        "start": "Сұхбатты бастау →",
-        "empty_name": "Атыңызды енгізіңіз.",
-        "candidate": "Үміткер",
-        "question": "Сұрақ",
-        "answer_placeholder": "Жауабыңызды жазыңыз...",
-        "finish": "Сұхбат аяқталды!",
-        "result": "📊 Нәтижені көру",
-        "new": "🔄 Жаңадан бастау",
-        "base": "Базалық",
-        "advanced": "Тереңдетілген",
-        "preparing": "Жасанды интеллект сұрақтар дайындап жатыр...",
-        "ai_ready": "HR-менеджер дайындалуда...",
-        "fallback": "Дайын сұрақтар базасы қолданылды.",
-        "no_questions": "Сұрақтар базасында кемінде 5 сұрақ болуы керек.",
-        "report_loading": "AI жауаптарыңызды бағалап жатыр...",
-        "report_done": "Бағалау аяқталды!",
-        "report_error": "AI сервистері қолжетімсіз. Резервтік бағалау іске қосылды.",
-        "download": "⬇️ Есепті жүктеу (.txt)",
-        "title": "Мансабыңа сенімді қадам жаса.",
-        "description": "Нақты жұмыс сұхбатына дайындал. Жасанды интеллект саған кәсіби сұрақтар қойып, жауаптарыңды бағалап, дамуыңа көмектеседі."
-    },
-
-    "Русский": {
-        "name": "Ваше имя",
-        "profession": "Профессия / направление",
-        "language": "Язык собеседования",
-        "level": "Уровень собеседования",
-        "start": "Начать собеседование →",
-        "empty_name": "Введите ваше имя.",
-        "candidate": "Кандидат",
-        "question": "Вопрос",
-        "answer_placeholder": "Напишите ваш ответ...",
-        "finish": "Собеседование завершено!",
-        "result": "📊 Посмотреть результат",
-        "new": "🔄 Начать заново",
-        "base": "Базовый",
-        "advanced": "Продвинутый",
-        "preparing": "Искусственный интеллект готовит вопросы...",
-        "ai_ready": "HR-менеджер готовится...",
-        "fallback": "Используется резервная база вопросов.",
-        "no_questions": "В базе должно быть не менее 5 вопросов.",
-        "report_loading": "AI оценивает ваши ответы...",
-        "report_done": "Оценивание завершено!",
-        "report_error": "AI-сервисы недоступны. Запущена резервная оценка.",
-        "download": "⬇️ Скачать отчет (.txt)",
-        "title": "Сделайте уверенный шаг к карьере.",
-        "description": "Подготовьтесь к настоящему собеседованию. Искусственный интеллект задаст профессиональные вопросы, оценит ваши ответы и поможет развиваться."
-    }
-}
-
-
-# ==================================================
-# 4. AI PROMPT
-# ==================================================
-
-QUESTION_PROMPT = """
-Сен құрылыс саласындағы тәжірибелі HR-менеджерсің.
-
-Мамандық: {profession}
-Деңгей: {level}
-Тіл: {language}
-
-Сұрақтар базасы:
-{questions}
-
-Үміткерге дәл 5 кәсіби сұрақ дайында.
-
-Ережелер:
-- Барлық сұрақты көрсетілген тілде жаз.
-- Базалық деңгейде негізгі кәсіби білімді тексер.
-- Тереңдетілген деңгейде практикалық және ситуациялық сұрақтарды таңда.
-- Берілген сұрақтар базасына сүйен.
-- Мамандыққа қатысы жоқ сұрақ қоспа.
-- Сұрақтарды жеңілден күрделіге қарай орналастыр.
-- Қайталанатын сұрақ болмасын.
-- Тек JSON массивін қайтар.
-- Markdown немесе түсініктеме қоспа.
-
-Формат:
-["1-сұрақ", "2-сұрақ", "3-сұрақ", "4-сұрақ", "5-сұрақ"]
-"""
-
-
-FOLLOWUP_PROMPT = """
-Сен құрылыс саласындағы тәжірибелі HR-мамансың.
-
-Мамандық: {profession}
-Деңгей: {level}
-Тіл: {language}
-
-Сұрақ: {question}
-
-Үміткердің жауабы:
-{answer}
-
-Жауапты талда.
-
-Егер жауап:
-- тым қысқа болса;
-- толық түсіндірілмесе;
-- нақты мысалсыз болса;
-- маңызды кәсіби тұсы ашылмаса,
-
-бір нақтылаушы сұрақ дайында.
-
-Егер жауап толық әрі нақты болса, қосымша сұрақ қажет емес.
-
-Ережелер:
-- Бір ғана қосымша сұрақ дайында.
-- Мамандыққа тікелей қатысты болсын.
-- Көрсетілген тілде жаз.
-- Жауапта жоқ ақпаратты ойдан қоспа.
-
-Тек JSON қайтар:
-
-{"followup": "Қосымша сұрақ"}
-
-Егер қосымша сұрақ қажет болмаса:
-
-{"followup": null}
-"""
-
-
-REPORT_PROMPT = """
-Сен құрылыс саласындағы тәжірибелі HR-экспертсің.
-
-Мамандық: {profession}
-Деңгей: {level}
-Тіл: {language}
-
-Сұрақтар базасы мен бағалау критерийлері:
-{questions}
-
-Сұхбат:
-{dialog}
-
-Үміткердің жауаптарын 100 балдық жүйемен бағала.
-
-БАҒАЛАУ ШКАЛАСЫ:
-1. Мазмұн мен кәсіби дұрыстығы: 40 балл
-2. Құрылым мен логика: 20 балл
-3. Нақтылық пен мысалдар: 20 балл
-4. Коммуникация: 10 балл
-5. Бейімделу және мәселені шешу: 10 балл
-
-Ережелер:
-- Әр жауапты сұрақтың критерийлерімен салыстыр.
-- Жалпы ұпай 100-ден аспасын.
-- Нақты қателерді көрсет.
-- Жауапта жоқ ақпаратты үміткер айтты деп жазба.
-- Қысқа жауапқа негізсіз жоғары балл берме.
-- Құрылыс нормаларына қатысты нақты құжат пен тармақты
-  тек сенімді білсең ғана көрсет.
-- Нақты нормативтік дерек болмаса, оны тексеру қажеттігін айт.
-- Нәтижені көрсетілген тілде жаз.
-
-НӘТИЖЕ ФОРМАТЫ:
-
-# СҰХБАТ НӘТИЖЕСІ
-
-## 1. ЖАЛПЫ ҰПАЙ: X / 100
-
-## 2. ДЕҢГЕЙ
-
-90–100: өте жақсы
-75–89: жақсы
-60–74: орташа
-0–59: төмен
-
-## 3. КРИТЕРИЙЛЕР БОЙЫНША
-
-- Мазмұн: X / 40
-- Құрылым: X / 20
-- Нақтылық: X / 20
-- Коммуникация: X / 10
-- Бейімделу: X / 10
-
-## 4. ӘР ЖАУАПТЫҢ ТАЛДАУЫ
-
-Әр сұрақ бойынша:
-- Жауаптың артықшылықтары
-- Кемшіліктері
-- Ұсынылатын дұрыс бағыт
-
-## 5. ЖІБЕРІЛГЕН ҚАТЕЛЕР
-
-## 6. ЖАҚСАРТУҒА АРНАЛҒАН 3 КЕҢЕС
-"""
-
-
-# ==================================================
-# 5. ДЕРЕКТЕР БАЗАСЫ
-# ==================================================
-
-@st.cache_data
-def load_db():
-    with open("questions_db.json", encoding="utf-8") as f:
-        data = json.load(f)
-
-    return data["professions"]
-
-
-# ==================================================
-# 6. GEMINI
-# ==================================================
+# =====================================================
+# 2. API КЛИЕНТТЕРІ
+# =====================================================
 
 @st.cache_resource
-def get_client():
-    try:
-        key = (
-            st.secrets.get("GEMINI_API_KEY")
-            or os.getenv("GEMINI_API_KEY")
-        )
-
-        if not key:
-            return None
-
-        return genai.Client(api_key=key)
-
-    except Exception:
+def get_gemini_client():
+    api_key = st.secrets.get("GEMINI_API_KEY", "")
+    if not api_key:
         return None
+    return genai.Client(api_key=api_key)
 
-
-def ask_gemini(prompt):
-    try:
-        client = get_client()
-
-        if client is None:
-            return None
-
-        response = client.models.generate_content(
-            model=MODEL,
-            contents=prompt
-        )
-
-        return response.text if response.text else None
-
-    except Exception as e:
-        print("Gemini error:", e)
-        return None
-
-
-# ==================================================
-# 7. QWEN
-# ==================================================
 
 @st.cache_resource
 def get_qwen_client():
-    try:
-        key = (
-            st.secrets.get("QWEN_API_KEY")
-            or os.getenv("QWEN_API_KEY")
-        )
-
-        if not key:
-            return None
-
-        return OpenAI(
-            api_key=key,
-            base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
-        )
-
-    except Exception:
+    api_key = st.secrets.get("QWEN_API_KEY", "")
+    if not api_key:
         return None
 
+    return OpenAI(
+        api_key=api_key,
+        base_url=QWEN_BASE_URL
+    )
 
-def ask_qwen(prompt):
+
+def ask_ai(prompt):
+    """
+    Алдымен Gemini-ді қолданады.
+    Gemini істемесе, Qwen-ге ауысады.
+    """
+
+    errors = []
+
+    # Gemini
+    try:
+        client = get_gemini_client()
+
+        if client:
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=prompt
+            )
+
+            if response and response.text:
+                return response.text
+
+    except Exception as e:
+        errors.append(f"Gemini: {str(e)}")
+
+    # Qwen
     try:
         client = get_qwen_client()
 
-        if client is None:
-            return None
+        if client:
+            response = client.chat.completions.create(
+                model=QWEN_MODEL,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.5
+            )
 
-        response = client.chat.completions.create(
-            model=QWEN_MODEL,
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.6
-        )
+            result = response.choices[0].message.content
 
-        return response.choices[0].message.content
+            if result:
+                return result
 
     except Exception as e:
-        print("Qwen error:", e)
-        return None
+        errors.append(f"Qwen: {str(e)}")
 
-
-# ==================================================
-# 8. AI АУЫСТЫРУ
-# ==================================================
-
-def ask_ai(prompt):
-    result = ask_gemini(prompt)
-
-    if result:
-        return result
-
-    result = ask_qwen(prompt)
-
-    if result:
-        return result
-
+    st.session_state.ai_errors = errors
     return None
 
 
-def fill(prompt, **kw):
-    for key, value in kw.items():
-        prompt = prompt.replace(
-            "{" + key + "}",
-            str(value)
-        )
+# =====================================================
+# 3. ДЕРЕКТЕР БАЗАСЫ
+# =====================================================
 
-    return prompt
+def load_db():
+    possible_paths = [
+        "questions_db.json",
+        "data/questions_db.json"
+    ]
+
+    for path in possible_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as file:
+                    data = json.load(file)
+
+                if isinstance(data, dict):
+                    return data.get("professions", [])
+
+                return data
+
+            except Exception as e:
+                st.error(f"JSON файлын оқу қатесі: {e}")
+                return []
+
+    st.error("questions_db.json файлы табылмады.")
+    return []
 
 
-# ==================================================
-# 9. JSON ОҚУ
-# ==================================================
+# =====================================================
+# 4. МӘТІНДІ ӨҢДЕУ
+# =====================================================
 
 def extract_json(text):
     if not text:
@@ -554,235 +138,212 @@ def extract_json(text):
     text = text.strip()
 
     # Markdown белгілерін алып тастау
-    text = re.sub(r"```json|```", "", text).strip()
-
-    # JSON массивін немесе объектісін табу
-    start_obj = text.find("{")
-    start_arr = text.find("[")
-
-    starts = [
-        x for x in [start_obj, start_arr]
-        if x >= 0
-    ]
-
-    if not starts:
-        return None
-
-    start = min(starts)
-
-    if text[start] == "[":
-        end = text.rfind("]") + 1
-    else:
-        end = text.rfind("}") + 1
-
-    if end <= start:
-        return None
+    text = re.sub(r"```json", "", text, flags=re.IGNORECASE)
+    text = text.replace("```", "").strip()
 
     try:
-        return json.loads(text[start:end])
+        return json.loads(text)
     except Exception:
-        return None
+        pass
+
+    # JSON массивін іздеу
+    start = text.find("[")
+    end = text.rfind("]")
+
+    if start != -1 and end != -1:
+        try:
+            return json.loads(text[start:end + 1])
+        except Exception:
+            pass
+
+    # JSON объектісін іздеу
+    start = text.find("{")
+    end = text.rfind("}")
+
+    if start != -1 and end != -1:
+        try:
+            return json.loads(text[start:end + 1])
+        except Exception:
+            pass
+
+    return None
 
 
-# ==================================================
-# 10. SESSION STATE
-# ==================================================
+def fill(prompt, **kwargs):
+    for key, value in kwargs.items():
+        prompt = prompt.replace("{" + key + "}", str(value))
+    return prompt
 
-def init_state():
-    defaults = {
-        "stage": "form",
-        "user": None,
-        "profession": None,
-        "questions": [],
-        "question_types": [],
-        "answers": [],
-        "question_index": 0,
-        "questions_ready": False,
-        "report": None,
-        "language": "Қазақша",
-        "level": "Базалық",
-        "followup_count": 0
+
+def is_correct_language(text, language):
+    """
+    Орысша мәтінде қазақ тіліне тән әріптер болмауын тексереді.
+    """
+
+    if language == "Русский":
+        kazakh_letters = r"[әіңғүұқөһӘІҢҒҮҰҚӨҺ]"
+        return not bool(re.search(kazakh_letters, text))
+
+    return True
+
+
+# =====================================================
+# 5. ИНТЕРФЕЙС МӘТІНДЕРІ
+# =====================================================
+
+TEXT = {
+    "Қазақша": {
+        "title": "Тілтабыс AI",
+        "subtitle": "Құрылыс саласындағы кәсіби біліміңді тексер",
+        "start": "Сұхбатты бастау",
+        "name": "Атыңыз",
+        "profession": "Мамандықты таңдаңыз",
+        "level": "Сұхбат деңгейі",
+        "basic": "Базалық",
+        "advanced": "Тереңдетілген",
+        "preparing": "Сұрақтар дайындалуда...",
+        "no_questions": "Сұрақтарды дайындау мүмкін болмады.",
+        "fallback": "AI сұрақтары қолжетімсіз. Деректер базасындағы сұрақтар қолданылды.",
+        "question": "Сұрақ",
+        "answer": "Жауабыңызды жазыңыз",
+        "send": "Жауапты жіберу",
+        "finish": "Сұхбатты аяқтау",
+        "report": "Нәтиже",
+        "score": "Жалпы нәтиже",
+        "restart": "Қайта бастау",
+        "download": "Есепті жүктеу",
+        "your_answer": "Сіздің жауабыңыз",
+        "ai_question": "AI сұхбат алушы",
+        "progress": "Сұхбат барысы",
+        "language": "Сұхбат тілі",
+        "welcome": "Қош келдіңіз!",
+        "name_required": "Атыңызды енгізіңіз.",
+        "choose_profession": "Мамандықты таңдаңыз.",
+        "next": "Келесі",
+        "analysis": "Жауаптарыңыз талдануда...",
+        "recommendations": "Ұсыныстар",
+        "restart_info": "Жаңа сұхбат бастау үшін төмендегі батырманы басыңыз."
+    },
+
+    "Русский": {
+        "title": "Тілтабыс AI",
+        "subtitle": "Проверьте свои профессиональные знания в строительной сфере",
+        "start": "Начать собеседование",
+        "name": "Ваше имя",
+        "profession": "Выберите профессию",
+        "level": "Уровень собеседования",
+        "basic": "Базовый",
+        "advanced": "Продвинутый",
+        "preparing": "Подготавливаем вопросы...",
+        "no_questions": "Не удалось подготовить вопросы.",
+        "fallback": "AI-вопросы недоступны. Использованы вопросы из базы данных.",
+        "question": "Вопрос",
+        "answer": "Введите ваш ответ",
+        "send": "Отправить ответ",
+        "finish": "Завершить собеседование",
+        "report": "Результат",
+        "score": "Общий результат",
+        "restart": "Начать заново",
+        "download": "Скачать отчет",
+        "your_answer": "Ваш ответ",
+        "ai_question": "AI-интервьюер",
+        "progress": "Ход собеседования",
+        "language": "Язык собеседования",
+        "welcome": "Добро пожаловать!",
+        "name_required": "Введите ваше имя.",
+        "choose_profession": "Выберите профессию.",
+        "next": "Далее",
+        "analysis": "Анализируем ваши ответы...",
+        "recommendations": "Рекомендации",
+        "restart_info": "Нажмите кнопку ниже, чтобы начать новое собеседование."
     }
-
-    for key, value in defaults.items():
-        st.session_state.setdefault(key, value)
+}
 
 
-def reset():
-    keys = [
-        "stage",
-        "user",
-        "profession",
-        "questions",
-        "question_types",
-        "answers",
-        "question_index",
-        "questions_ready",
-        "report",
-        "language",
-        "level",
-        "followup_count"
-    ]
+# =====================================================
+# 6. AI СҰРАҚТАРЫН ДАЙЫНДАУ
+# =====================================================
 
-    for key in keys:
-        st.session_state.pop(key, None)
+QUESTION_PROMPT = """
+You are an experienced HR manager in the construction industry.
 
-    init_state()
+Profession: {profession}
+Interview level: {level}
+Required language: {language}
+
+Question database:
+{questions}
+
+TASK:
+Create exactly 5 professional interview questions.
+
+STRICT LANGUAGE RULE:
+- If the required language is Русский, ALL questions MUST be entirely in Russian.
+- If the required language is Қазақша, ALL questions MUST be entirely in Kazakh.
+- Never mix Kazakh and Russian.
+- Translate the meaning of database questions into the required language.
+- Do not copy Kazakh questions when Russian is requested.
+
+OTHER RULES:
+- Use the database as the basis.
+- Basic level: test fundamental professional knowledge.
+- Advanced level: use practical and situational questions.
+- Arrange questions from easy to difficult.
+- Avoid duplicates.
+
+Return ONLY a valid JSON array of exactly 5 strings.
+Do not add Markdown or explanations.
+"""
 
 
-# ==================================================
-# 11. БРЕНД
-# ==================================================
+def translate_questions(questions, language):
+    if language == "Қазақша":
+        return questions
 
-def show_brand():
-    st.markdown("""
-    <div class="brand">
-        <div class="brand-icon">🎯</div>
-        <div class="brand-name">Тілтабыс AI</div>
-    </div>
-    """, unsafe_allow_html=True)
+    prompt = f"""
+Translate these construction interview questions into Russian.
 
+Every question must be entirely in Russian.
+Do not use Kazakh words or Kazakh-specific letters.
+Preserve the professional meaning.
+Return only a JSON array containing exactly 5 strings.
 
-# ==================================================
-# 12. БАСТЫ БЕТ
-# ==================================================
+Questions:
+{json.dumps(questions, ensure_ascii=False)}
+"""
 
-def step_form():
-    db = load_db()
+    result = ask_ai(prompt)
+    translated = extract_json(result)
 
-    language = st.session_state.get("language", "Қазақша")
-    t = TEXT[language]
-
-    st.markdown(f"""
-    <div class="brand">
-        <div class="brand-icon">🎯</div>
-        <div class="brand-name">Тілтабыс AI</div>
-    </div>
-
-    <div class="hero">
-        <div class="hero-tag">AI · HR INTERVIEW SIMULATOR</div>
-        <h1>{t["title"]}</h1>
-        <p>{t["description"]}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.markdown("""
-        <div class="info-card">
-            <div class="info-title">01 · Сұхбат</div>
-            <div class="info-text">
-                Мамандыққа сәйкес кәсіби сұрақтар.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col2:
-        st.markdown("""
-        <div class="info-card">
-            <div class="info-title">02 · Бағалау</div>
-            <div class="info-text">
-                100 балдық жүйемен жауаптарды бағалау.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col3:
-        st.markdown("""
-        <div class="info-card">
-            <div class="info-title">03 · Нәтиже</div>
-            <div class="info-text">
-                Қателер мен жақсартуға арналған кеңестер.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.subheader("Сұхбатты бастау")
-    st.caption("Өзің туралы ақпаратты толтыр.")
-
-    with st.form("start"):
-        name = st.text_input(
-            t["name"],
-            placeholder="..."
+    if (
+        isinstance(translated, list)
+        and len(translated) == len(questions)
+        and all(
+            isinstance(q, str)
+            and q.strip()
+            and is_correct_language(q, language)
+            for q in translated
         )
+    ):
+        return translated
 
-        professions = [
-            p["profession"] for p in db
-        ]
-
-        prof = st.selectbox(
-            t["profession"],
-            professions
-        )
-
-        language = st.selectbox(
-            t["language"],
-            ["Қазақша", "Русский"]
-        )
-
-        if language == "Қазақша":
-            levels = ["Базалық", "Тереңдетілген"]
-        else:
-            levels = ["Базовый", "Продвинутый"]
-
-        level = st.selectbox(
-            t["level"],
-            levels
-        )
-
-        ok = st.form_submit_button(
-            t["start"],
-            use_container_width=True
-        )
-
-    if ok:
-        if not name.strip():
-            st.warning(t["empty_name"])
-            return
-
-        prof_data = next(
-            p for p in db
-            if p["profession"] == prof
-        )
-
-        st.session_state.user = {
-            "name": name.strip()
-        }
-
-        st.session_state.profession = prof_data
-        st.session_state.language = language
-
-        if language == "Русский":
-            st.session_state.level = (
-                "Базалық"
-                if level == "Базовый"
-                else "Тереңдетілген"
-            )
-        else:
-            st.session_state.level = level
-
-        st.session_state.stage = "interview"
-        st.session_state.questions = []
-        st.session_state.question_types = []
-        st.session_state.answers = []
-        st.session_state.question_index = 0
-        st.session_state.questions_ready = False
-        st.session_state.report = None
-        st.session_state.followup_count = 0
-
-        st.rerun()
-
-    st.markdown("""
-    <div class="footer">
-        Тілтабыс AI · Жасанды интеллект көмегімен кәсіби даму
-    </div>
-    """, unsafe_allow_html=True)
+    return None
 
 
-# ==================================================
-# 13. СҰРАҚТАРДЫ ДАЙЫНДАУ
-# ==================================================
+def get_fallback_questions(db_questions):
+    questions = []
+
+    for item in db_questions:
+        if isinstance(item, dict):
+            question = item.get("question")
+            if question:
+                questions.append(question)
+
+        elif isinstance(item, str):
+            questions.append(item)
+
+    return questions[:5]
+
 
 def prepare_questions():
     profession = st.session_state.profession["profession"]
@@ -802,550 +363,828 @@ def prepare_questions():
         )
     )
 
-    with st.spinner(
-        TEXT[language]["preparing"]
-    ):
+    with st.spinner(TEXT[language]["preparing"]):
         result = ask_ai(prompt)
 
     questions = extract_json(result)
 
-    if (
+    valid_questions = (
         isinstance(questions, list)
         and len(questions) == 5
         and all(
-            isinstance(q, str) and q.strip()
+            isinstance(q, str)
+            and q.strip()
+            and is_correct_language(q, language)
             for q in questions
         )
-    ):
+    )
+
+    if valid_questions:
         st.session_state.questions = questions
-        st.session_state.question_types = [
-            "main"
-        ] * 5
+        st.session_state.question_types = ["main"] * 5
+        st.session_state.questions_ready = True
+        return True
 
-    else:
-        # AI жұмыс істемесе, резервтік база
-        questions = []
+    # AI сұрақтары дұрыс тілде болмаса, аударуға әрекет жасау
+    if isinstance(questions, list) and len(questions) == 5:
+        if all(isinstance(q, str) and q.strip() for q in questions):
+            translated = translate_questions(questions, language)
 
-        for q in db_questions:
-            if isinstance(q, dict):
-                question = q.get("question")
-                if question:
-                    questions.append(question)
+            if translated:
+                st.session_state.questions = translated
+                st.session_state.question_types = ["main"] * 5
+                st.session_state.questions_ready = True
+                return True
 
-            elif isinstance(q, str):
-                questions.append(q)
+    # Резервтік сұрақтар
+    fallback = get_fallback_questions(db_questions)
 
-        if len(questions) < 5:
+    if len(fallback) < 5:
+        st.error(TEXT[language]["no_questions"])
+        return False
+
+    if language == "Русский":
+        fallback = translate_questions(fallback, language)
+
+        if not fallback:
             st.error(
-                TEXT[language]["no_questions"]
+                "Не удалось подготовить вопросы на русском языке. "
+                "Проверьте доступность AI-сервисов."
             )
             return False
 
-        st.session_state.questions = questions[:5]
-        st.session_state.question_types = [
-            "main"
-        ] * 5
-
-        if language == "Русский":
-            # Резервтік сұрақтарды аударуға тырысу
-            translate_prompt = f"""
-            Переведи следующие профессиональные вопросы
-            на русский язык. Сохрани их смысл.
-
-            Верни только JSON-массив из 5 строк.
-
-            {json.dumps(questions[:5], ensure_ascii=False)}
-            """
-
-            translated = extract_json(
-                ask_ai(translate_prompt)
-            )
-
-            if (
-                isinstance(translated, list)
-                and len(translated) == 5
-                and all(isinstance(q, str) for q in translated)
-            ):
-                st.session_state.questions = translated
-
-        st.warning(
-            TEXT[language]["fallback"]
-        )
-
+    st.session_state.questions = fallback
+    st.session_state.question_types = ["main"] * 5
     st.session_state.questions_ready = True
+
+    st.warning(TEXT[language]["fallback"])
     return True
 
 
-# ==================================================
-# 14. ҚОСЫМША СҰРАҚ
-# ==================================================
+# =====================================================
+# 7. ҚОСЫМША СҰРАҚТАР
+# =====================================================
+
+FOLLOWUP_PROMPT = """
+You are an experienced construction industry HR interviewer.
+
+Profession: {profession}
+Interview language: {language}
+
+Main question:
+{question}
+
+Candidate's answer:
+{answer}
+
+Create ONE short follow-up question.
+It should clarify the candidate's answer or test practical understanding.
+
+STRICT LANGUAGE RULE:
+- If language is Русский, write entirely in Russian.
+- If language is Қазақша, write entirely in Kazakh.
+- Never mix languages.
+- Do not use Kazakh-specific letters in Russian text.
+
+Return only the question, without explanations.
+"""
+
 
 def generate_followup(question, answer):
-    profession = st.session_state.profession["profession"]
     language = st.session_state.language
-    level = st.session_state.level
 
     prompt = fill(
         FOLLOWUP_PROMPT,
-        profession=profession,
+        profession=st.session_state.profession["profession"],
         language=language,
-        level=level,
         question=question,
         answer=answer
     )
 
     result = ask_ai(prompt)
-    data = extract_json(result)
 
-    if not isinstance(data, dict):
+    if not result:
         return None
 
-    followup = data.get("followup")
+    result = result.strip().strip('"').strip("'")
 
-    if (
-        isinstance(followup, str)
-        and followup.strip()
-    ):
-        return followup.strip()
+    if not is_correct_language(result, language):
+        translation_prompt = f"""
+Translate this interview question into Russian.
+Use only Russian. Do not use Kazakh-specific letters.
+Return only the translated question.
 
-    return None
+Question:
+{result}
+"""
+        translated = ask_ai(translation_prompt)
+
+        if not translated:
+            return None
+
+        result = translated.strip().strip('"').strip("'")
+
+        if not is_correct_language(result, language):
+            return None
+
+    return result
 
 
-# ==================================================
-# 15. СҰХБАТ
-# ==================================================
+# =====================================================
+# 8. НӘТИЖЕНІ БАҒАЛАУ
+# =====================================================
 
-def step_interview():
+REPORT_PROMPT = """
+You are a professional HR expert in the construction industry.
+
+Prepare an objective interview evaluation report.
+
+Candidate: {name}
+Profession: {profession}
+Level: {level}
+Language: {language}
+
+Interview questions and answers:
+{answers}
+
+Evaluation criteria from the database:
+{criteria}
+
+SCORING:
+- Professional knowledge: 40 points
+- Practical thinking: 20 points
+- Completeness of answers: 20 points
+- Understanding of construction documentation and standards: 10 points
+- Communication and clarity: 10 points
+
+Total: 100 points.
+
+IMPORTANT:
+- Evaluate the actual answers, not assumed knowledge.
+- Do not give full points for vague answers.
+- Consider the profession and interview level.
+- Explain strengths and weaknesses.
+- Give specific recommendations for improvement.
+- If the candidate did not answer a question, consider this in the score.
+
+STRICT LANGUAGE RULE:
+- If language is Русский, write the entire report in Russian.
+- If language is Қазақша, write the entire report in Kazakh.
+- Never mix languages.
+- Do not use Kazakh-specific letters in Russian text.
+
+REPORT STRUCTURE:
+1. Overall score out of 100.
+2. Professional knowledge assessment.
+3. Strengths.
+4. Weaknesses.
+5. Recommendations.
+6. Final HR conclusion.
+
+Write a clear, professional and useful report.
+"""
+
+
+def build_answers_text():
+    lines = []
+
+    for i, item in enumerate(st.session_state.answers, start=1):
+        lines.append(
+            f"{i}. {item['question']}\n"
+            f"Candidate answer: {item['answer']}"
+        )
+
+    return "\n\n".join(lines)
+
+
+def fallback_report():
+    """
+    Бұл AI бағалауы емес.
+    AI қызметтері істемеген жағдайда қолданылатын
+    қарапайым резервтік бағалау.
+    """
+
+    language = st.session_state.language
+    answers = st.session_state.answers
+
+    total_words = sum(
+        len(item["answer"].split())
+        for item in answers
+    )
+
+    answered = sum(
+        1 for item in answers
+        if item["answer"].strip()
+    )
+
+    if answered == 0:
+        score = 0
+    else:
+        completeness = answered / max(len(answers), 1)
+        average_words = total_words / max(answered, 1)
+
+        score = int(
+            completeness * 50
+            + min(average_words / 40, 1) * 50
+        )
+
+    score = min(score, 100)
+
+    if language == "Русский":
+        report = f"""
+# Результат собеседования
+
+**Кандидат:** {st.session_state.user}
+**Профессия:** {st.session_state.profession["profession"]}
+**Уровень:** {st.session_state.level}
+
+## Общий результат: {score}/100
+
+Ответов получено: {answered} из {len(answers)}.
+
+Количество слов в ответах: {total_words}.
+
+## Анализ
+
+Оценка сформирована автоматически по количеству ответов и их объему.
+Это резервная оценка, а не полноценная экспертная оценка AI.
+
+## Рекомендации
+
+- Изучайте профессиональную терминологию.
+- Отвечайте конкретно и последовательно.
+- Приводите практические примеры из строительной сферы.
+- Повторите основные нормативные документы и строительные процессы.
+
+## Заключение
+
+Для более точной оценки необходимо пройти полноценный анализ ответов с помощью AI.
+"""
+    else:
+        report = f"""
+# Сұхбат нәтижесі
+
+**Үміткер:** {st.session_state.user}
+**Мамандық:** {st.session_state.profession["profession"]}
+**Деңгей:** {st.session_state.level}
+
+## Жалпы нәтиже: {score}/100
+
+Жауап берілген сұрақтар: {answered}/{len(answers)}.
+
+Жауаптардағы сөз саны: {total_words}.
+
+## Талдау
+
+Баға жауаптардың саны мен көлеміне қарай автоматты түрде есептелді.
+Бұл толыққанды AI сараптамасы емес, резервтік бағалау болып табылады.
+
+## Ұсыныстар
+
+- Кәсіби терминдерді меңгеріңіз.
+- Сұрақтарға нақты әрі жүйелі жауап беріңіз.
+- Құрылыс саласынан практикалық мысалдар келтіріңіз.
+- Негізгі нормативтік құжаттар мен құрылыс процестерін қайталаңыз.
+
+## Қорытынды
+
+Нақтырақ бағалау үшін жауаптарды AI арқылы толық талдау қажет.
+"""
+
+    return report, score
+
+
+def generate_report():
+    language = st.session_state.language
+
+    answers_text = build_answers_text()
+
+    criteria = json.dumps(
+        st.session_state.profession["questions"],
+        ensure_ascii=False,
+        indent=2
+    )
+
+    prompt = fill(
+        REPORT_PROMPT,
+        name=st.session_state.user,
+        profession=st.session_state.profession["profession"],
+        level=st.session_state.level,
+        language=language,
+        answers=answers_text,
+        criteria=criteria
+    )
+
+    with st.spinner(TEXT[language]["analysis"]):
+        result = ask_ai(prompt)
+
+    if result:
+        result = result.strip()
+
+        if is_correct_language(result, language):
+            st.session_state.report = result
+            st.session_state.report_is_ai = True
+            return
+
+        # Есеп басқа тілде келсе, аударуға әрекет жасау
+        translation_prompt = f"""
+Translate the following complete interview evaluation report into Russian.
+
+Use professional Russian.
+Do not use Kazakh words or Kazakh-specific letters.
+Preserve all scores, headings, recommendations and meaning.
+Return only the translated report.
+
+Report:
+{result}
+"""
+        translated = ask_ai(translation_prompt)
+
+        if translated and is_correct_language(translated, language):
+            st.session_state.report = translated.strip()
+            st.session_state.report_is_ai = True
+            return
+
+    report, score = fallback_report()
+
+    st.session_state.report = report
+    st.session_state.report_is_ai = False
+    st.session_state.fallback_score = score
+
+
+# =====================================================
+# 9. SESSION STATE
+# =====================================================
+
+DEFAULT_STATE = {
+    "stage": "form",
+    "user": "",
+    "profession": None,
+    "level": "Базалық",
+    "language": "Қазақша",
+    "questions": [],
+    "question_types": [],
+    "answers": [],
+    "question_index": 0,
+    "questions_ready": False,
+    "report": None,
+    "report_is_ai": False,
+    "followup_count": 0,
+    "ai_errors": []
+}
+
+for key, value in DEFAULT_STATE.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+
+def reset_app():
+    for key, value in DEFAULT_STATE.items():
+        st.session_state[key] = value
+
+
+# =====================================================
+# 10. CSS ДИЗАЙН
+# =====================================================
+
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+}
+
+.stApp {
+    background: #F5F7F2;
+}
+
+.block-container {
+    max-width: 1050px;
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+}
+
+.hero {
+    background: linear-gradient(135deg, #173F35, #276B52);
+    color: white;
+    padding: 42px;
+    border-radius: 22px;
+    margin-bottom: 28px;
+}
+
+.hero h1 {
+    font-size: 42px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.hero p {
+    font-size: 17px;
+    color: #E0EEE6;
+}
+
+.info-card {
+    background: white;
+    border: 1px solid #E5EAE4;
+    border-radius: 16px;
+    padding: 22px;
+    min-height: 145px;
+}
+
+.info-card h3 {
+    color: #214E3E;
+    font-size: 19px;
+}
+
+.info-card p {
+    color: #68766E;
+    font-size: 14px;
+}
+
+.section-title {
+    color: #214E3E;
+    font-size: 25px;
+    font-weight: 750;
+    margin-bottom: 14px;
+}
+
+.question-card {
+    background: white;
+    padding: 25px;
+    border-radius: 18px;
+    border: 1px solid #E5EAE4;
+    margin: 12px 0 20px 0;
+}
+
+.stButton > button {
+    background: #24634B;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    min-height: 45px;
+    font-weight: 600;
+}
+
+.stButton > button:hover {
+    background: #194B38;
+    color: white;
+    border: none;
+}
+
+[data-testid="stProgressBar"] > div > div {
+    background-color: #24634B;
+}
+
+.footer {
+    text-align: center;
+    color: #89938C;
+    font-size: 13px;
+    padding-top: 35px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# =====================================================
+# 11. ЖОҒАРҒЫ БӨЛІМ
+# =====================================================
+
+language = st.session_state.language
+t = TEXT[language]
+
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    st.markdown(
+        f"""
+        <div style="font-size:24px;font-weight:800;color:#214E3E;">
+            🏗️ Тілтабыс AI
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with col2:
+    selected_language = st.selectbox(
+        "Тіл / Язык",
+        ["Қазақша", "Русский"],
+        index=["Қазақша", "Русский"].index(language),
+        key="language_selector"
+    )
+
+    if selected_language != st.session_state.language:
+        st.session_state.language = selected_language
+        st.rerun()
+
+
+# =====================================================
+# 12. БАСТЫ БЕТ
+# =====================================================
+
+if st.session_state.stage == "form":
+
+    st.markdown(
+        f"""
+        <div class="hero">
+            <h1>{t["title"]}</h1>
+            <p>{t["subtitle"]}</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("""
+        <div class="info-card">
+            <h3>🎯 Кәсіби сұхбат</h3>
+            <p>Құрылыс саласындағы мамандықтар бойынша сұрақтар.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div class="info-card">
+            <h3>🤖 AI бағалау</h3>
+            <p>Жауаптарыңызды талдау және нәтижені бағалау.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown("""
+        <div class="info-card">
+            <h3>📊 Жеке есеп</h3>
+            <p>Күшті және әлсіз тұстарыңызды анықтау.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown(
+        f'<div class="section-title">{t["welcome"]}</div>',
+        unsafe_allow_html=True
+    )
+
+    professions = load_db()
+
+    if professions:
+        profession_names = [
+            item["profession"]
+            for item in professions
+        ]
+
+        with st.form("interview_form"):
+
+            name = st.text_input(t["name"])
+
+            selected_profession = st.selectbox(
+                t["profession"],
+                profession_names
+            )
+
+            level_options = (
+                ["Базалық", "Тереңдетілген"]
+                if language == "Қазақша"
+                else ["Базовый", "Продвинутый"]
+            )
+
+            selected_level = st.selectbox(
+                t["level"],
+                level_options
+            )
+
+            submitted = st.form_submit_button(
+                t["start"],
+                use_container_width=True
+            )
+
+            if submitted:
+
+                if not name.strip():
+                    st.error(t["name_required"])
+
+                else:
+                    profession_data = next(
+                        item for item in professions
+                        if item["profession"] == selected_profession
+                    )
+
+                    st.session_state.user = name.strip()
+                    st.session_state.profession = profession_data
+
+                    if selected_level in ["Базалық", "Базовый"]:
+                        st.session_state.level = "Базалық"
+                    else:
+                        st.session_state.level = "Тереңдетілген"
+
+                    st.session_state.answers = []
+                    st.session_state.question_index = 0
+                    st.session_state.followup_count = 0
+                    st.session_state.questions_ready = False
+                    st.session_state.report = None
+                    st.session_state.report_is_ai = False
+                    st.session_state.stage = "interview"
+
+                    st.rerun()
+
+
+# =====================================================
+# 13. СҰХБАТ БӨЛІМІ
+# =====================================================
+
+elif st.session_state.stage == "interview":
+
     language = st.session_state.language
     t = TEXT[language]
 
-    profession = st.session_state.profession["profession"]
-    name = st.session_state.user["name"]
-
-    show_brand()
-
-    st.subheader(f"💬 {profession}")
-    st.caption(f"{t['candidate']}: {name}")
-
     if not st.session_state.questions_ready:
-        if not prepare_questions():
-            return
+        success = prepare_questions()
 
-        st.rerun()
+        if success:
+            st.rerun()
+        else:
+            if st.button(t["restart"]):
+                reset_app()
+                st.rerun()
+            st.stop()
 
     questions = st.session_state.questions
-    answers = st.session_state.answers
     index = st.session_state.question_index
 
-    total = len(questions)
+    if index >= len(questions):
+        st.session_state.stage = "report"
+        st.rerun()
 
-    st.progress(
-        min(len(answers) / max(total, 1), 1.0)
+    st.markdown(
+        f'<div class="section-title">{t["ai_question"]}</div>',
+        unsafe_allow_html=True
     )
 
-    if index < total:
-        st.caption(
-            f"{t['question']} {index + 1} / {total}"
-        )
-    else:
-        st.caption(
-            f"{len(answers)} / {total}"
-        )
+    st.write(
+        f"**{st.session_state.user}** · "
+        f"{st.session_state.profession['profession']}"
+    )
 
-    # Бұрынғы сұрақтар мен жауаптар
-    for i, answer in enumerate(answers):
-        if i >= len(questions):
-            break
+    progress = index / len(questions)
 
-        with st.chat_message("assistant"):
-            if st.session_state.question_types[i] == "followup":
-                st.caption("Қосымша сұрақ")
-            st.write(questions[i])
+    st.progress(progress)
 
-        with st.chat_message("user"):
-            st.write(answer)
-
-    # Сұхбат аяқталса
-    if index >= total:
-        st.success(t["finish"])
-
-        if st.button(
-            t["result"],
-            type="primary",
-            use_container_width=True
-        ):
-            st.session_state.stage = "report"
-            st.rerun()
-
-        return
+    st.caption(
+        f"{t['progress']}: {index} / {len(questions)}"
+    )
 
     current_question = questions[index]
-    current_type = st.session_state.question_types[index]
 
-    with st.chat_message("assistant"):
-        if current_type == "followup":
-            st.caption("Қосымша сұрақ")
-        st.write(current_question)
-
-    answer = st.chat_input(
-        t["answer_placeholder"]
+    st.markdown(
+        f"""
+        <div class="question-card">
+            <div style="color:#738078;font-size:14px;">
+                {t["question"]} {index + 1}
+            </div>
+            <h3 style="color:#214E3E;margin-top:10px;">
+                {current_question}
+            </h3>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
+    # Бұрын жіберілген жауаптарды көрсету
+    for i, item in enumerate(st.session_state.answers):
+        with st.chat_message("assistant"):
+            st.write(f"**{t['question']} {i + 1}:**")
+            st.write(item["question"])
+
+        with st.chat_message("user"):
+            st.write(item["answer"])
+
+    answer = st.chat_input(t["answer"])
+
     if answer and answer.strip():
-        answer = answer.strip()
 
-        st.session_state.answers.append(answer)
+        st.session_state.answers.append({
+            "question": current_question,
+            "answer": answer.strip(),
+            "type": st.session_state.question_types[index]
+        })
 
-        # Тереңдетілген деңгейде қосымша сұрақ
-        is_advanced = (
+        # Тереңдетілген деңгейде 2 қосымша сұраққа дейін
+        if (
             st.session_state.level == "Тереңдетілген"
-        )
-
-        is_main_question = (
-            current_type == "main"
-        )
-
-        can_add_followup = (
-            is_advanced
-            and is_main_question
             and st.session_state.followup_count < 2
-        )
+            and st.session_state.question_types[index] == "main"
+        ):
 
-        if can_add_followup:
-            with st.spinner("Жауабыңыз талданып жатыр..."):
-                followup = generate_followup(
-                    current_question,
-                    answer
-                )
+            followup = generate_followup(
+                current_question,
+                answer.strip()
+            )
 
             if followup:
-                insert_position = index + 1
-
                 st.session_state.questions.insert(
-                    insert_position,
+                    index + 1,
                     followup
                 )
 
                 st.session_state.question_types.insert(
-                    insert_position,
+                    index + 1,
                     "followup"
                 )
 
                 st.session_state.followup_count += 1
 
         st.session_state.question_index += 1
+
+        if st.session_state.question_index >= len(
+            st.session_state.questions
+        ):
+            st.session_state.stage = "report"
+
         st.rerun()
 
+    st.markdown("---")
 
-# ==================================================
-# 16. РЕЗЕРВТІК БАҒАЛАУ
-# ==================================================
-
-def fallback_report(questions, answers, db_questions):
-    language = st.session_state.language
-
-    def words(text):
-        return set(re.findall(
-            r"[а-яәіңғүұқөһёa-z0-9]+",
-            text.lower()
-        ))
-
-    stopwords = {
-        "және", "мен", "бұл", "үшін", "туралы",
-        "маған", "менің", "болады", "керек", "деп",
-        "the", "and", "for", "with", "that",
-        "и", "в", "на", "для", "это", "что"
-    }
-
-    reference_text = json.dumps(
-        db_questions,
-        ensure_ascii=False
-    )
-
-    reference_words = words(reference_text) - stopwords
-
-    scores = {
-        "content": [],
-        "structure": [],
-        "specificity": [],
-        "communication": [],
-        "adaptation": []
-    }
-
-    errors = []
-
-    for i, answer in enumerate(answers):
-        text = answer.strip()
-        tokens = words(text) - stopwords
-        word_count = len(text.split())
-
-        if not text or word_count < 3:
-            errors.append(i + 1)
-
-        overlap = len(tokens & reference_words)
-
-        content = min(
-            40,
-            word_count * 0.35 + min(overlap, 10) * 1.2
-        )
-
-        sentences = len(re.findall(r"[.!?]+", text))
-
-        structure = min(
-            20,
-            5 + sentences * 3 + (
-                5 if word_count >= 25 else 0
-            )
-        )
-
-        example_words = [
-            "мысалы", "тәжірибе", "жоба", "нәтиже",
-            "себебі", "өлшем", "есеп",
-            "например", "опыт", "проект", "результат"
-        ]
-
-        examples = sum(
-            1 for w in example_words
-            if w in text.lower()
-        )
-
-        specificity = min(
-            20,
-            5 + examples * 3 + (
-                5 if re.search(r"\d+", text) else 0
-            )
-        )
-
-        communication = min(
-            10,
-            3 + min(word_count / 5, 7)
-        )
-
-        adaptive_words = [
-            "үйрен", "бейім", "шешім", "қиындық",
-            "дамыту", "тәжірибе", "жауапкершілік",
-            "решение", "развитие", "ответственность"
-        ]
-
-        adaptation = min(
-            10,
-            4 + sum(
-                2 for w in adaptive_words
-                if w in text.lower()
-            )
-        )
-
-        if not text:
-            content = 0
-            structure = 0
-            specificity = 0
-            communication = 0
-            adaptation = 0
-
-        scores["content"].append(content)
-        scores["structure"].append(structure)
-        scores["specificity"].append(specificity)
-        scores["communication"].append(communication)
-        scores["adaptation"].append(adaptation)
-
-    final_scores = {
-        key: round(sum(value) / len(value))
-        if value else 0
-        for key, value in scores.items()
-    }
-
-    total = min(100, sum(final_scores.values()))
-
-    if language == "Қазақша":
-        if total >= 90:
-            level = "Өте жақсы"
-        elif total >= 75:
-            level = "Жақсы"
-        elif total >= 60:
-            level = "Орташа"
+    if st.button(
+        t["finish"],
+        use_container_width=True
+    ):
+        if st.session_state.answers:
+            st.session_state.stage = "report"
+            st.rerun()
         else:
-            level = "Төмен"
-
-        error_text = (
-            "\n".join(
-                f"- {i}-жауап: жауап тым қысқа немесе толық емес."
-                for i in errors
-            )
-            if errors else
-            "- Қысқа жауаптар анықталған жоқ."
-        )
-
-        return f"""
-# 📊 СҰХБАТ НӘТИЖЕСІ
-
-**ЕСКЕРТУ: Бұл резервтік автоматты бағалау. AI сараптамасы емес.**
-
-## 1. ЖАЛПЫ ҰПАЙ: {total} / 100
-
-## 2. ДЕҢГЕЙ: {level}
-
-## 3. КРИТЕРИЙЛЕР БОЙЫНША
-
-- Мазмұн: {final_scores['content']} / 40
-- Құрылым: {final_scores['structure']} / 20
-- Нақтылық: {final_scores['specificity']} / 20
-- Коммуникация: {final_scores['communication']} / 10
-- Бейімделу: {final_scores['adaptation']} / 10
-
-## 4. ЖІБЕРІЛГЕН ҚАТЕЛЕР
-
-{error_text}
-
-## 5. ЖАҚСАРТУҒА АРНАЛҒАН 3 КЕҢЕС
-
-1. Жауаптарыңызды нақты мысалдармен толықтырыңыз.
-2. Кәсіби терминдерді дұрыс қолданып үйреніңіз.
-3. Жауаптарыңызды жүйелі, логикалық ретпен жеткізіңіз.
-"""
-
-    else:
-        if total >= 90:
-            level = "Отлично"
-        elif total >= 75:
-            level = "Хорошо"
-        elif total >= 60:
-            level = "Средний уровень"
-        else:
-            level = "Низкий уровень"
-
-        error_text = (
-            "\n".join(
-                f"- Ответ {i}: слишком короткий или неполный."
-                for i in errors
-            )
-            if errors else
-            "- Критически коротких ответов не обнаружено."
-        )
-
-        return f"""
-# 📊 РЕЗУЛЬТАТ СОБЕСЕДОВАНИЯ
-
-**ВНИМАНИЕ: Это резервная автоматическая оценка, а не оценка AI-эксперта.**
-
-## 1. ОБЩИЙ БАЛЛ: {total} / 100
-
-## 2. УРОВЕНЬ: {level}
-
-## 3. ОЦЕНКА ПО КРИТЕРИЯМ
-
-- Содержание: {final_scores['content']} / 40
-- Структура: {final_scores['structure']} / 20
-- Конкретность: {final_scores['specificity']} / 20
-- Коммуникация: {final_scores['communication']} / 10
-- Адаптация: {final_scores['adaptation']} / 10
-
-## 4. ДОПУЩЕННЫЕ ОШИБКИ
-
-{error_text}
-
-## 5. ТРИ СОВЕТА ПО УЛУЧШЕНИЮ
-
-1. Дополняйте ответы конкретными примерами.
-2. Изучайте профессиональные термины.
-3. Излагайте мысли последовательно и логично.
-"""
+            st.warning(t["answer"])
 
 
-# ==================================================
-# 17. НӘТИЖЕ
-# ==================================================
+# =====================================================
+# 14. НӘТИЖЕ БӨЛІМІ
+# =====================================================
 
-def step_report():
+elif st.session_state.stage == "report":
+
     language = st.session_state.language
     t = TEXT[language]
 
-    show_brand()
-
-    st.title("📊 " + (
-        "Сұхбат нәтижесі"
-        if language == "Қазақша"
-        else "Результат собеседования"
-    ))
-
     if st.session_state.report is None:
-        questions = st.session_state.questions
-        answers = st.session_state.answers
+        generate_report()
 
-        dialog = ""
+    st.markdown(
+        f'<div class="section-title">{t["report"]}</div>',
+        unsafe_allow_html=True
+    )
 
-        for i, answer in enumerate(answers):
-            dialog += (
-                f"\nСұрақ {i + 1}: {questions[i]}"
-                f"\nҮміткердің жауабы: {answer}\n"
-            )
+    st.write(
+        f"**{st.session_state.user}** · "
+        f"{st.session_state.profession['profession']}"
+    )
 
-        prompt = fill(
-            REPORT_PROMPT,
-            profession=st.session_state.profession["profession"],
-            level=st.session_state.level,
-            language=language,
-            questions=json.dumps(
-                st.session_state.profession["questions"],
-                ensure_ascii=False
-            ),
-            dialog=dialog
+    if st.session_state.report_is_ai:
+        st.success(
+            "AI талдауы дайын."
+            if language == "Қазақша"
+            else "AI-анализ готов."
+        )
+    else:
+        st.warning(
+            "Резервтік бағалау қолданылды. Бұл толық AI бағалауы емес."
+            if language == "Қазақша"
+            else "Использована резервная оценка. Это не полноценная оценка AI."
         )
 
-        with st.spinner(t["report_loading"]):
-            report = ask_ai(prompt)
-
-        if report is None:
-            st.warning(t["report_error"])
-
-            report = fallback_report(
-                questions,
-                answers,
-                st.session_state.profession["questions"]
-            )
-
-        st.session_state.report = report
-
-    st.success(t["report_done"])
+    st.markdown("---")
 
     st.markdown(
-        '<div class="result-card">',
-        unsafe_allow_html=True
+        st.session_state.report
     )
 
-    st.markdown(st.session_state.report)
+    st.markdown("---")
 
-    st.markdown(
-        '</div>',
-        unsafe_allow_html=True
-    )
+    report_text = st.session_state.report
 
     st.download_button(
-        t["download"],
-        data=st.session_state.report,
-        file_name="interview_report.txt",
+        label=t["download"],
+        data=report_text.encode("utf-8"),
+        file_name="tiltabys_ai_report.txt",
         mime="text/plain",
         use_container_width=True
     )
 
+    st.write(t["restart_info"])
+
     if st.button(
-        t["new"],
+        t["restart"],
         use_container_width=True
     ):
-        reset()
+        reset_app()
         st.rerun()
 
 
-# ==================================================
-# 18. ҚОСЫМШАНЫ ІСКЕ ҚОСУ
-# ==================================================
+# =====================================================
+# 15. FOOTER
+# =====================================================
 
-init_state()
-
-if st.session_state.stage == "form":
-    step_form()
-
-elif st.session_state.stage == "interview":
-    step_interview()
-
-elif st.session_state.stage == "report":
-    step_report()
+st.markdown("""
+<div class="footer">
+    Тілтабыс AI · Құрылыс саласындағы кәсіби сұхбат платформасы
+</div>
+""", unsafe_allow_html=True)
