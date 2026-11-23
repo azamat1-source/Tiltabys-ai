@@ -1,13 +1,225 @@
 import json
 import os
-import time
 import re
 import streamlit as st
 from google import genai
-from google.genai import types
 from openai import OpenAI
 
+
+# =========================
+# БАПТАУЛАР
+# =========================
+
 MODEL = "gemini-3.8-flash"
+QWEN_MODEL = "qwen3.7-plus"
+
+st.set_page_config(
+    page_title="Тілтабыс AI",
+    page_icon="🎯",
+    layout="centered"
+)
+
+
+# =========================
+# ДИЗАЙН
+# =========================
+
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --green: #174c3c;
+    --green-light: #e7f0e9;
+    --cream: #f7f6ef;
+    --text: #20352d;
+    --muted: #718078;
+}
+
+.stApp {
+    background: var(--cream);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+}
+
+header[data-testid="stHeader"] {
+    background: transparent;
+}
+
+.block-container {
+    max-width: 920px;
+    padding-top: 2rem;
+    padding-bottom: 4rem;
+}
+
+h1, h2, h3 {
+    font-family: 'Manrope', sans-serif !important;
+    color: var(--green) !important;
+    font-weight: 800 !important;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 35px;
+}
+
+.brand-icon {
+    background: var(--green);
+    color: white;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.brand-name {
+    color: var(--green);
+    font-weight: 800;
+    font-size: 21px;
+}
+
+.hero {
+    background: var(--green);
+    color: white;
+    border-radius: 24px;
+    padding: 38px 34px;
+    margin-bottom: 28px;
+}
+
+.hero-tag {
+    display: inline-block;
+    background: rgba(255,255,255,0.14);
+    color: #d9eadf;
+    border-radius: 30px;
+    padding: 7px 13px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 18px;
+}
+
+.hero h1 {
+    color: white !important;
+    font-size: 36px !important;
+    line-height: 1.2;
+    margin: 0 0 14px 0;
+}
+
+.hero p {
+    color: #dce9e1;
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 0;
+}
+
+.info-card {
+    background: white;
+    border: 1px solid #e7e9e1;
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 15px;
+    min-height: 112px;
+}
+
+.info-title {
+    color: var(--green);
+    font-size: 16px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.info-text {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+div[data-testid="stForm"] {
+    background: white;
+    border: 1px solid #e7e9e1;
+    border-radius: 20px;
+    padding: 26px;
+}
+
+div[data-testid="stTextInput"] input,
+div[data-testid="stSelectbox"] div[data-baseweb="select"] {
+    border-radius: 11px;
+}
+
+.stButton > button,
+.stFormSubmitButton > button,
+.stDownloadButton > button {
+    background: var(--green);
+    color: white;
+    border: 1px solid var(--green);
+    border-radius: 12px;
+    padding: 12px 22px;
+    font-weight: 700;
+    min-height: 46px;
+}
+
+.stButton > button:hover,
+.stFormSubmitButton > button:hover,
+.stDownloadButton > button:hover {
+    background: #23664f;
+    color: white;
+    border-color: #23664f;
+}
+
+div[data-testid="stChatMessage"] {
+    background: white;
+    border: 1px solid #e7e9e1;
+    border-radius: 16px;
+    padding: 14px;
+}
+
+div[data-testid="stProgressBar"] > div > div {
+    background: var(--green);
+}
+
+.stAlert {
+    border-radius: 13px;
+}
+
+.result-card {
+    background: white;
+    border: 1px solid #e7e9e1;
+    border-radius: 18px;
+    padding: 24px;
+    margin: 15px 0;
+}
+
+.footer {
+    text-align: center;
+    color: #89958d;
+    font-size: 12px;
+    padding-top: 35px;
+}
+
+@media (max-width: 600px) {
+    .hero {
+        padding: 27px 22px;
+    }
+
+    .hero h1 {
+        font-size: 28px !important;
+    }
+
+    div[data-testid="stForm"] {
+        padding: 18px;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# =========================
+# AI PROMPT
+# =========================
 
 QUESTION_PROMPT = """
 Сен тәжірибелі HR-менеджерсің.
@@ -18,26 +230,29 @@ QUESTION_PROMPT = """
 Сұрақтар базасы:
 {questions}
 
-Осы мәліметтерге сүйеніп, үміткерге арналған дәл 5 сұхбат сұрағын дайында.
+Үміткерге арналған дәл 5 сұхбат сұрағын дайында.
 
 Ережелер:
-- Сұрақтар қазақ тілінде болсын.
-- Сұрақтар мамандыққа сәйкес болсын.
-- Сұрақтарды тек берілген базадан ал.
-- Сұрақтарды қайталама.
-- Біртіндеп жеңілден күрделіге қарай орналастыр.
+- Қазақ тілінде жаз.
+- Мамандыққа сәйкес болсын.
+- Тек берілген базадағы сұрақтарды пайдалан.
+- Қайталанатын сұрақ болмасын.
+- Жеңілден күрделіге қарай орналастыр.
 - Тек JSON массивін қайтар.
-- Markdown немесе қосымша түсініктеме жазба.
+- Markdown немесе түсініктеме қоспа.
 
 Формат:
 ["1-сұрақ", "2-сұрақ", "3-сұрақ", "4-сұрақ", "5-сұрақ"]
 """
 
+
 REPORT_PROMPT = """
 Сен тәжірибелі HR-экспертсің.
+
 Үміткердің сұхбат жауаптарын 100 балдық шкала бойынша бағала.
 
 Мамандық: {profession}
+
 Сұрақтар базасы мен бағалау критерийлері:
 {questions}
 
@@ -52,70 +267,83 @@ REPORT_PROMPT = """
 5. Бейімделу: 10 балл
 
 Ережелер:
-- Әр жауапты базадағы criteria және good_answer-мен салыстыр.
-- Тек үміткердің нақты жауаптарына сүйен.
+- Әр жауапты criteria және good_answer арқылы салыстыр.
+- Тек нақты жауаптарға сүйен.
 - Бос немесе қате жауапқа төмен балл бер.
 - Жалпы ұпай 100-ден аспасын.
 - Қазақ тілінде жауап бер.
 
 НӘТИЖЕ ФОРМАТЫ:
+
 1. ЖАЛПЫ ҰПАЙ: X / 100
+
 2. ДЕҢГЕЙ:
-   - 90–100: өте жақсы, жұмысқа дайын
-   - 75–89: жақсы, кішкене жетілдіру керек
-   - 60–74: орташа, негізгі олқылықтар бар
-   - 60-тан төмен: әлсіз, қайта дайындалу керек
+- 90–100: өте жақсы, жұмысқа дайын
+- 75–89: жақсы, кішкене жетілдіру керек
+- 60–74: орташа, негізгі олқылықтар бар
+- 60-тан төмен: әлсіз, қайта дайындалу керек
+
 3. КРИТЕРИЙЛЕР БОЙЫНША:
-   - Мазмұн: X / 40
-   - Құрылым: X / 20
-   - Нақтылық: X / 20
-   - Коммуникация: X / 10
-   - Бейімделу: X / 10
+- Мазмұн: X / 40
+- Құрылым: X / 20
+- Нақтылық: X / 20
+- Коммуникация: X / 10
+- Бейімделу: X / 10
+
 4. ЖІБЕРІЛГЕН ҚАТЕЛЕР
+
 5. ЖАҚСАРТУҒА АРНАЛҒАН 3 КЕҢЕС
 """
 
-st.set_page_config(
-    page_title="Тілтабыс AI",
-    page_icon="🎯",
-    layout="centered"
-)
 
+# =========================
+# ДЕРЕКТЕР БАЗАСЫ
+# =========================
 
 @st.cache_data
 def load_db():
     with open("questions_db.json", encoding="utf-8") as f:
-        return json.load(f)["professions"]
+        data = json.load(f)
 
+    return data["professions"]
+
+
+# =========================
+# GEMINI
+# =========================
 
 @st.cache_resource
 def get_client():
     key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
+
     if not key:
-        st.error("GEMINI_API_KEY табылмады.")
-        st.stop()
+        return None
+
     return genai.Client(api_key=key)
 
 
 def ask_gemini(prompt):
     try:
-        response = get_client().models.generate_content(
+        client = get_client()
+
+        if client is None:
+            return None
+
+        response = client.models.generate_content(
             model=MODEL,
             contents=prompt
         )
 
-        if response.text:
-            return response.text
-
-        st.error("Gemini бос жауап қайтарды.")
-        return None
+        return response.text if response.text else None
 
     except Exception as e:
-        st.error(
-            f"Gemini API қатесі: {type(e).__name__}: {e}"
-        )
+        st.warning(f"Gemini қатесі: {type(e).__name__}: {e}")
         return None
 
+
+# =========================
+# QWEN
+# =========================
 
 @st.cache_resource
 def get_qwen_client():
@@ -135,11 +363,10 @@ def ask_qwen(prompt):
         client = get_qwen_client()
 
         if client is None:
-            st.error("QWEN_API_KEY табылмады.")
             return None
 
         response = client.chat.completions.create(
-            model="qwen3.7-plus",
+            model=QWEN_MODEL,
             messages=[
                 {"role": "user", "content": prompt}
             ],
@@ -149,9 +376,13 @@ def ask_qwen(prompt):
         return response.choices[0].message.content
 
     except Exception as e:
-        st.error(f"Qwen API қатесі: {type(e).__name__}: {e}")
+        st.warning(f"Qwen қатесі: {type(e).__name__}: {e}")
         return None
 
+
+# =========================
+# AI АУЫСТЫРУ
+# =========================
 
 def ask_ai(prompt):
     result = ask_gemini(prompt)
@@ -159,22 +390,29 @@ def ask_ai(prompt):
     if result:
         return result
 
-    st.warning("Gemini қолжетімсіз. Qwen резервтік AI іске қосылды.")
+    st.warning("Gemini қолжетімсіз. Qwen іске қосылып жатыр...")
 
-    return ask_qwen(prompt)
+    result = ask_qwen(prompt)
+
+    if result:
+        return result
+
+    return None
 
 
 def fill(prompt, **kw):
     for key, value in kw.items():
-        prompt = prompt.replace("{" + key + "}", str(value))
+        prompt = prompt.replace(
+            "{" + key + "}",
+            str(value)
+        )
+
     return prompt
 
 
-def fill(prompt, **kw):
-    for key, value in kw.items():
-        prompt = prompt.replace("{" + key + "}", str(value))
-    return prompt
-
+# =========================
+# SESSION STATE
+# =========================
 
 def init_state():
     defaults = {
@@ -194,28 +432,92 @@ def init_state():
 
 def reset():
     for key in [
-        "stage", "user", "profession",
-        "questions", "answers", "question_index",
-        "questions_ready", "report"
+        "stage",
+        "user",
+        "profession",
+        "questions",
+        "answers",
+        "question_index",
+        "questions_ready",
+        "report"
     ]:
         st.session_state.pop(key, None)
 
+    init_state()
+
+
+# =========================
+# БАСТЫ БЕТ
+# =========================
 
 def step_form():
-    st.title("🎯 Тілтабыс AI")
-    st.caption(
-        "ЖИ-HR сұхбат симуляторы: 5 сұрақ, "
-        "100 балдық баға және жақсарту кеңестері"
-    )
-
     db = load_db()
 
+    st.markdown("""
+    <div class="brand">
+        <div class="brand-icon">🎯</div>
+        <div class="brand-name">Тілтабыс AI</div>
+    </div>
+
+    <div class="hero">
+        <div class="hero-tag">AI · HR INTERVIEW SIMULATOR</div>
+        <h1>Мансабыңа сенімді қадам жаса.</h1>
+        <p>
+            Нақты жұмыс сұхбатына дайындал.
+            Жасанды интеллект саған кәсіби сұрақтар қойып,
+            жауаптарыңды бағалап, дамуыңа көмектеседі.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("""
+        <div class="info-card">
+            <div class="info-title">01 · Сұхбат</div>
+            <div class="info-text">
+                Мамандыққа сәйкес 5 кәсіби сұрақ.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div class="info-card">
+            <div class="info-title">02 · Бағалау</div>
+            <div class="info-text">
+                100 балдық жүйемен жауаптарды бағалау.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown("""
+        <div class="info-card">
+            <div class="info-title">03 · Нәтиже</div>
+            <div class="info-text">
+                Қателер мен жақсартуға арналған кеңестер.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.subheader("Сұхбатты бастау")
+    st.caption("Өзің туралы ақпаратты толтыр.")
+
     with st.form("start"):
-        name = st.text_input("Атыңыз")
+        name = st.text_input(
+            "Атыңыз",
+            placeholder="Атыңызды енгізіңіз"
+        )
+
+        professions = [
+            p["profession"] for p in db
+        ]
 
         prof = st.selectbox(
             "Мамандық / бағыт",
-            [p["profession"] for p in db]
+            professions
         )
 
         level = st.selectbox(
@@ -223,7 +525,10 @@ def step_form():
             ["Бастаушы", "Орта", "Тәжірибелі"]
         )
 
-        ok = st.form_submit_button("Сұхбатты бастау")
+        ok = st.form_submit_button(
+            "Сұхбатты бастау →",
+            use_container_width=True
+        )
 
     if ok:
         if not name.strip():
@@ -231,7 +536,8 @@ def step_form():
             return
 
         prof_data = next(
-            p for p in db if p["profession"] == prof
+            p for p in db
+            if p["profession"] == prof
         )
 
         st.session_state.user = {
@@ -249,19 +555,37 @@ def step_form():
 
         st.rerun()
 
+    st.markdown("""
+    <div class="footer">
+        Тілтабыс AI · Жасанды интеллект көмегімен кәсіби даму
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# =========================
+# СҰХБАТ
+# =========================
 
 def step_interview():
-    st.subheader(
-        f"💬 {st.session_state.profession['profession']} · "
-        f"{st.session_state.user['name']}"
-    )
+    profession = st.session_state.profession["profession"]
+    name = st.session_state.user["name"]
+
+    st.markdown("""
+    <div class="brand">
+        <div class="brand-icon">🎯</div>
+        <div class="brand-name">Тілтабыс AI</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.subheader(f"💬 {profession}")
+    st.caption(f"Үміткер: {name}")
 
     if not st.session_state.questions_ready:
-        st.info("Жасанды интеллект сұхбат сұрақтарын дайындап жатыр...")
+        st.info("Жасанды интеллект сұрақтар дайындап жатыр...")
 
         prompt = fill(
             QUESTION_PROMPT,
-            profession=st.session_state.profession["profession"],
+            profession=profession,
             level=st.session_state.user["level"],
             questions=json.dumps(
                 st.session_state.profession["questions"],
@@ -272,61 +596,56 @@ def step_interview():
         with st.spinner("HR-менеджер дайындалуда..."):
             result = ask_ai(prompt)
 
-        if not result:
-            fallback_questions = (
-                st.session_state.profession["questions"]
-            )
+        if result:
+            try:
+                start = result.find("[")
+                end = result.rfind("]") + 1
 
-            questions = []
+                if start == -1 or end == 0:
+                    raise ValueError("JSON массиві табылмады")
 
-            for q in fallback_questions:
-                if isinstance(q, dict):
-                    question = q.get("question")
-                    if question:
-                        questions.append(question)
-                elif isinstance(q, str):
-                    questions.append(q)
+                questions = json.loads(result[start:end])
 
-            if len(questions) < 5:
-                st.error("Сұрақтар базасында 5 сұрақ жеткіліксіз.")
-                return
+                if not isinstance(questions, list) or len(questions) != 5:
+                    raise ValueError("Дәл 5 сұрақ алынбады")
 
-            st.session_state.questions = questions[:5]
-            st.session_state.questions_ready = True
+                if not all(isinstance(q, str) for q in questions):
+                    raise ValueError("Сұрақтардың форматы дұрыс емес")
 
-            st.warning(
-                "Gemini лимиті таусылды. "
-                "Дайын сұрақтар базасы қолданылды."
-            )
-            st.rerun()
+                st.session_state.questions = questions
+                st.session_state.questions_ready = True
+                st.rerun()
 
-        try:
-            start = result.find("[")
-            end = result.rfind("]") + 1
+            except Exception as e:
+                st.warning(f"AI сұрақтарын оқу мүмкін болмады: {e}")
 
-            if start == -1 or end == 0:
-                raise ValueError("JSON массиві табылмады")
+        fallback_questions = st.session_state.profession["questions"]
+        questions = []
 
-            questions = json.loads(result[start:end])
+        for q in fallback_questions:
+            if isinstance(q, dict):
+                question = q.get("question")
+                if question:
+                    questions.append(question)
+            elif isinstance(q, str):
+                questions.append(q)
 
-            if not isinstance(questions, list) or len(questions) != 5:
-                raise ValueError("5 сұрақ алынбады")
-
-            st.session_state.questions = questions
-            st.session_state.questions_ready = True
-            st.rerun()
-
-        except Exception as e:
-            st.error(f"Сұрақтарды оқу мүмкін болмады: {e}")
-            st.code(str(result))
+        if len(questions) < 5:
+            st.error("Сұрақтар базасында кемінде 5 сұрақ болуы керек.")
             return
+
+        st.session_state.questions = questions[:5]
+        st.session_state.questions_ready = True
+
+        st.warning("Дайын сұрақтар базасы қолданылды.")
+        st.rerun()
 
     questions = st.session_state.questions
     answers = st.session_state.answers
     index = st.session_state.question_index
 
     st.progress(len(answers) / 5)
-    st.caption(f"Сұрақ {index + 1} / 5")
+    st.caption(f"Сұрақ {min(index + 1, 5)} / 5")
 
     for i, answer in enumerate(answers):
         with st.chat_message("assistant"):
@@ -336,10 +655,12 @@ def step_interview():
             st.write(answer)
 
     if index >= 5:
-        st.success("Сұхбат аяқталды! Рақмет.")
+        st.success("Сұхбат аяқталды!")
+
         if st.button("📊 Нәтижені көру", type="primary"):
             st.session_state.stage = "report"
             st.rerun()
+
         return
 
     with st.chat_message("assistant"):
@@ -347,13 +668,17 @@ def step_interview():
 
     answer = st.chat_input("Жауабыңызды жазыңыз...")
 
-    if answer:
+    if answer and answer.strip():
         st.session_state.answers.append(answer.strip())
         st.session_state.question_index += 1
         st.rerun()
 
+
+# =========================
+# РЕЗЕРВТІК БАҒАЛАУ
+# =========================
+
 def fallback_report(questions, answers, db_questions):
-    """Gemini қолжетімсіз болғанда қарапайым бағалау."""
 
     def words(text):
         return set(re.findall(
@@ -368,8 +693,10 @@ def fallback_report(questions, answers, db_questions):
     }
 
     reference_text = json.dumps(
-        db_questions, ensure_ascii=False
+        db_questions,
+        ensure_ascii=False
     )
+
     reference_words = words(reference_text) - stopwords
 
     scores = {
@@ -392,36 +719,51 @@ def fallback_report(questions, answers, db_questions):
                 f"{i + 1}-жауап: жауап тым қысқа немесе толық емес."
             )
 
-        # 1. Мазмұн: 40 балл
         overlap = len(tokens & reference_words)
-        content = min(40, word_count * 0.35 +
-                      min(overlap, 10) * 1.2)
 
-        # 2. Құрылым: 20 балл
+        content = min(
+            40,
+            word_count * 0.35 + min(overlap, 10) * 1.2
+        )
+
         sentences = len(re.findall(r"[.!?]+", text))
-        structure = min(20, 5 + sentences * 3 +
-                        (5 if word_count >= 25 else 0))
 
-        # 3. Нақтылық: 20 балл
+        structure = min(
+            20,
+            5 + sentences * 3 + (5 if word_count >= 25 else 0)
+        )
+
         example_words = [
             "мысалы", "тәжірибе", "жоба", "нәтиже",
             "себебі", "өйткені", "өлшем", "есеп"
         ]
-        examples = sum(1 for w in example_words if w in text.lower())
-        specificity = min(20, 5 + examples * 3 +
-                          (5 if re.search(r"\d+", text) else 0))
 
-        # 4. Коммуникация: 10 балл
-        communication = min(10, 3 + min(word_count / 5, 7))
+        examples = sum(
+            1 for w in example_words
+            if w in text.lower()
+        )
 
-        # 5. Бейімделу: 10 балл
+        specificity = min(
+            20,
+            5 + examples * 3 +
+            (5 if re.search(r"\d+", text) else 0)
+        )
+
+        communication = min(
+            10,
+            3 + min(word_count / 5, 7)
+        )
+
         adaptive_words = [
             "үйрен", "бейім", "шешім", "қиындық",
             "дамыту", "тәжірибе", "жауапкершілік"
         ]
+
         adaptation = min(
-            10, 4 + sum(
-                2 for w in adaptive_words if w in text.lower()
+            10,
+            4 + sum(
+                2 for w in adaptive_words
+                if w in text.lower()
             )
         )
 
@@ -455,7 +797,7 @@ def fallback_report(questions, answers, db_questions):
     if not errors:
         errors.append(
             "Қысқа жауаптар анықталған жоқ. "
-            "Дегенмен, нақты кәсіби терминдер мен мысалдарды көбейтуге болады."
+            "Нақты кәсіби терминдер мен мысалдарды көбейтуге болады."
         )
 
     return f"""
@@ -485,12 +827,22 @@ def fallback_report(questions, answers, db_questions):
 
 ---
 *Ескерту: Бұл резервтік автоматты бағалау.
-AI сараптамасы емес. Баға жауаптың ұзындығы мен
-қарапайым мәтіндік белгілеріне негізделген.*
+AI сараптамасы емес.*
 """
 
 
+# =========================
+# НӘТИЖЕ
+# =========================
+
 def step_report():
+    st.markdown("""
+    <div class="brand">
+        <div class="brand-icon">🎯</div>
+        <div class="brand-name">Тілтабыс AI</div>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.title("📊 Сұхбат нәтижесі")
 
     if st.session_state.report is None:
@@ -498,6 +850,7 @@ def step_report():
         answers = st.session_state.answers
 
         dialog = ""
+
         for i in range(len(answers)):
             dialog += (
                 f"\nСұрақ {i + 1}: {questions[i]}"
@@ -514,32 +867,53 @@ def step_report():
             dialog=dialog
         )
 
-        with st.spinner("Gemini жауаптарыңызды бағалап жатыр..."):
+        with st.spinner("AI жауаптарыңызды бағалап жатыр..."):
             report = ask_ai(prompt)
 
         if report is None:
-            st.error("Gemini бағалау жасай алмады. API қатесін тексеріңіз.")
-            st.stop()
+            st.warning(
+                "AI сервистері қолжетімсіз. "
+                "Резервтік бағалау іске қосылды."
+            )
+
+            report = fallback_report(
+                questions,
+                answers,
+                st.session_state.profession["questions"]
+            )
 
         st.session_state.report = report
 
-    st.success("AI бағалауы сәтті орындалды!")
-    st.markdown(st.session_state.report)
+    st.success("Бағалау аяқталды!")
+
+    st.markdown(
+        f'<div class="result-card">{st.session_state.report}</div>',
+        unsafe_allow_html=True
+    )
 
     st.download_button(
         "⬇️ Есепті жүктеу (.txt)",
-        st.session_state.report,
-        file_name="interview_report.txt"
+        data=st.session_state.report,
+        file_name="interview_report.txt",
+        mime="text/plain"
     )
 
-    if st.button("🔄 Жаңадан бастау"):
+    if st.button("🔄 Жаңадан бастау", use_container_width=True):
         reset()
         st.rerun()
+
+
+# =========================
+# ҚОСЫМШАНЫ ІСКЕ ҚОСУ
+# =========================
+
 init_state()
 
 if st.session_state.stage == "form":
     step_form()
+
 elif st.session_state.stage == "interview":
     step_interview()
+
 elif st.session_state.stage == "report":
     step_report()
