@@ -5,6 +5,7 @@ import re
 import streamlit as st
 from google import genai
 from google.genai import types
+from openai import OpenAI
 
 MODEL = "gemini-3.8-flash"
 
@@ -108,6 +109,59 @@ def ask_gemini(prompt):
 
         st.error("Gemini бос жауап қайтарды.")
         return None
+
+   @st.cache_resource
+def get_qwen_client():
+    key = st.secrets.get("QWEN_API_KEY") or os.getenv("QWEN_API_KEY")
+
+    if not key:
+        return None
+
+    return OpenAI(
+        api_key=key,
+        base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    )
+
+
+def ask_qwen(prompt):
+    try:
+        client = get_qwen_client()
+
+        if client is None:
+            st.error("QWEN_API_KEY табылмады.")
+            return None
+
+        response = client.chat.completions.create(
+            model="qwen3.7-plus",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.6
+        )
+
+        return response.choices[0].message.content
+
+    except Exception as e:
+        st.error(f"Qwen API қатесі: {type(e).__name__}: {e}")
+        return None
+
+
+    if result:
+        return result
+
+    st.warning("Gemini қолжетімсіз. Qwen резервтік AI іске қосылды.")
+
+    return ask_qwen(prompt)
+
+def ask_ai(prompt):
+    result = ask_gemini(prompt)
+
+    if result:
+        return result
+
+    st.warning("Gemini қолжетімсіз. Qwen резервтік AI іске қосылды.")
+
+    return ask_qwen(prompt)
 
     except Exception as e:
         st.error(
@@ -216,7 +270,7 @@ def step_interview():
         )
 
         with st.spinner("HR-менеджер дайындалуда..."):
-            result = ask_gemini(prompt)
+            result = ask_ai(prompt)
 
         if not result:
             fallback_questions = (
@@ -461,7 +515,7 @@ def step_report():
         )
 
         with st.spinner("Gemini жауаптарыңызды бағалап жатыр..."):
-            report = ask_gemini(prompt)
+            report = ask_ai(prompt)
 
         if report is None:
             st.error("Gemini бағалау жасай алмады. API қатесін тексеріңіз.")
