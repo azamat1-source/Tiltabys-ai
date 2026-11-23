@@ -110,7 +110,7 @@ def ask_gemini(prompt):
         st.error("Gemini бос жауап қайтарды.")
         return None
 
-   @st.cache_resource
+@st.cache_resource
 def get_qwen_client():
     key = st.secrets.get("QWEN_API_KEY") or os.getenv("QWEN_API_KEY")
 
