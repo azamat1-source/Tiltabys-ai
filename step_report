@@ -112,10 +112,10 @@ def ask_gemini(prompt):
 
     except Exception as e:
         st.error(
-            f"Gemini API қатесі: {type(e)._name_}: {e}"
+            f"Gemini API қатесі: {type(e).__name__}: {e}"
         )
         return None
-  
+
 
 @st.cache_resource
 def get_qwen_client():
@@ -153,13 +153,6 @@ def ask_qwen(prompt):
         return None
 
 
-    if result:
-        return result
-
-    st.warning("Gemini қолжетімсіз. Qwen резервтік AI іске қосылды.")
-
-    return ask_qwen(prompt)
-
 def ask_ai(prompt):
     result = ask_gemini(prompt)
 
@@ -170,11 +163,11 @@ def ask_ai(prompt):
 
     return ask_qwen(prompt)
 
-    except Exception as e:
-        st.error(
-            f"Gemini API қатесі: {type(e).__name__}: {e}"
-        )
-        return None
+
+def fill(prompt, **kw):
+    for key, value in kw.items():
+        prompt = prompt.replace("{" + key + "}", str(value))
+    return prompt
 
 
 def fill(prompt, **kw):
